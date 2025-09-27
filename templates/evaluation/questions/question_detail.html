@@ -1,0 +1,278 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ question.question_text|truncatechars:50 }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'assets/vendor/font-awesome/css/font-awesome.min.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <!-- Header -->
+        <div class="col-12 mb-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2 class="text-primary">تفاصيل السؤال</h2>
+                <div>
+                    <a href="{% url 'evaluation:question_update' question.id %}" class="btn btn-warning">
+                        <i class="fas fa-edit"></i> تعديل
+                    </a>
+                    <button type="button" class="btn btn-danger"
+                            onclick="confirmDelete({{ question.id }}, '{{ question.question_text|truncatechars:30 }}')">
+                        <i class="fas fa-trash"></i> حذف
+                    </button>
+                    <a href="{% url 'evaluation:question_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-right"></i> العودة للقائمة
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Question Details -->
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-question-circle text-primary"></i>
+                        معلومات السؤال
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Question Type -->
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <strong>نوع السؤال:</strong>
+                        </div>
+                        <div class="col-md-9">
+                            <span class="badge
+                                {% if question.question_type == 'qa' %}badge-warning
+                                {% elif question.question_type == 'mcq' %}badge-primary
+                                {% elif question.question_type == 'true_false' %}badge-info
+                                {% else %}badge-secondary{% endif %}">
+                                {{ question.get_question_type_display }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Question Text -->
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <strong>نص السؤال:</strong>
+                        </div>
+                        <div class="col-md-9">
+                            <div class="p-3 bg-light rounded">
+                                {{ question.question_text|linebreaks }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- MCQ Options -->
+                    {% if question.question_type == 'mcq' %}
+                        <div class="row mb-3">
+                            <div class="col-md-3">
+                                <strong>خيارات الإجابة:</strong>
+                            </div>
+                            <div class="col-md-9">
+                                <div class="list-group">
+                                    {% if question.option_a %}
+                                        <div class="list-group-item d-flex align-items-center
+                                             {% if question.correct_answer == 'A' %}list-group-item-success{% endif %}">
+                                            <span class="badge badge-secondary me-2">أ</span>
+                                            {{ question.option_a }}
+                                            {% if question.correct_answer == 'A' %}
+                                                <i class="fas fa-check text-success ms-auto"></i>
+                                            {% endif %}
+                                        </div>
+                                    {% endif %}
+                                    {% if question.option_b %}
+                                        <div class="list-group-item d-flex align-items-center
+                                             {% if question.correct_answer == 'B' %}list-group-item-success{% endif %}">
+                                            <span class="badge badge-secondary me-2">ب</span>
+                                            {{ question.option_b }}
+                                            {% if question.correct_answer == 'B' %}
+                                                <i class="fas fa-check text-success ms-auto"></i>
+                                            {% endif %}
+                                        </div>
+                                    {% endif %}
+                                    {% if question.option_c %}
+                                        <div class="list-group-item d-flex align-items-center
+                                             {% if question.correct_answer == 'C' %}list-group-item-success{% endif %}">
+                                            <span class="badge badge-secondary me-2">ج</span>
+                                            {{ question.option_c }}
+                                            {% if question.correct_answer == 'C' %}
+                                                <i class="fas fa-check text-success ms-auto"></i>
+                                            {% endif %}
+                                        </div>
+                                    {% endif %}
+                                    {% if question.option_d %}
+                                        <div class="list-group-item d-flex align-items-center
+                                             {% if question.correct_answer == 'D' %}list-group-item-success{% endif %}">
+                                            <span class="badge badge-secondary me-2">د</span>
+                                            {{ question.option_d }}
+                                            {% if question.correct_answer == 'D' %}
+                                                <i class="fas fa-check text-success ms-auto"></i>
+                                            {% endif %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <!-- True/False Answer -->
+                    {% if question.question_type == 'true_false' %}
+                        <div class="row mb-3">
+                            <div class="col-md-3">
+                                <strong>الإجابة الصحيحة:</strong>
+                            </div>
+                            <div class="col-md-9">
+                                <span class="badge badge-lg
+                                    {% if question.correct_answer == 'True' %}badge-success
+                                    {% else %}badge-danger{% endif %}">
+                                    {% if question.correct_answer == 'True' %}
+                                        <i class="fas fa-check"></i> صحيح
+                                    {% else %}
+                                        <i class="fas fa-times"></i> خطأ
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <!-- Q&A Answer -->
+                    {% if question.question_type == 'qa' and question.answer %}
+                        <div class="row mb-3">
+                            <div class="col-md-3">
+                                <strong>الإجابة النموذجية:</strong>
+                            </div>
+                            <div class="col-md-9">
+                                <div class="p-3 bg-light rounded">
+                                    {{ question.answer|linebreaks }}
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <!-- Status -->
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <strong>الحالة:</strong>
+                        </div>
+                        <div class="col-md-9">
+                            {% if question.is_active %}
+                                <span class="badge badge-success">نشط</span>
+                            {% else %}
+                                <span class="badge badge-secondary">غير نشط</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Creation Date -->
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <strong>تاريخ الإنشاء:</strong>
+                        </div>
+                        <div class="col-md-9">
+                            <small class="text-muted">{{ question.created_at|date:"Y/m/d H:i" }}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">تأكيد الحذف</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>هل أنت متأكد من حذف السؤال "<span id="questionTitle"></span>"؟</p>
+                <p class="text-danger small">هذا الإجراء لا يمكن التراجع عنه.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <form method="post" id="deleteForm" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">حذف</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function confirmDelete(questionId, questionTitle) {
+    document.getElementById('questionTitle').textContent = questionTitle;
+    document.getElementById('deleteForm').action = '/evaluation/questions/' + questionId + '/delete/';
+
+    // Show modal (Bootstrap 5)
+    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    modal.show();
+}
+</script>
+
+<style>
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.card-body {
+    color: #000000;
+}
+
+.card-body strong,
+.card-body span,
+.card-body div,
+.card-body p {
+    color: #000000 !important;
+}
+
+.card-header h5 {
+    color: #000000 !important;
+}
+
+.badge {
+    font-size: 0.75em;
+    color: #ffffff !important;
+}
+
+.badge-lg {
+    font-size: 0.9em;
+    padding: 0.5em 0.75em;
+    color: #ffffff !important;
+}
+
+.list-group-item {
+    border: 1px solid rgba(0, 0, 0, 0.125);
+    color: #000000 !important;
+}
+
+.text-muted {
+    color: #333333 !important;
+}
+
+.me-2 {
+    margin-right: 0.5rem !important;
+}
+
+.ms-auto {
+    margin-left: auto !important;
+}
+
+.bg-light {
+    background-color: #f8f9fa !important;
+    color: #000000 !important;
+}
+
+.row div {
+    color: #000000;
+}
+</style>
+{% endblock %}

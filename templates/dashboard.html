@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - MyProject{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="dashboard-header">
+        <h1>Dashboard</h1>
+        <p>Welcome back, {{ user.username }}!</p>
+    </div>
+
+    <div class="dashboard-stats">
+        <div class="stat-card">
+            <h3>Total Users</h3>
+            <span class="stat-number">{{ total_users }}</span>
+        </div>
+
+        <div class="stat-card">
+            <h3>Active Sessions</h3>
+            <span class="stat-number">{{ active_sessions }}</span>
+        </div>
+
+        <div class="stat-card">
+            <h3>Recent Activities</h3>
+            <span class="stat-number">{{ recent_activities }}</span>
+        </div>
+    </div>
+
+    <div class="dashboard-content">
+        <div class="quick-actions">
+            <h3>Quick Actions</h3>
+            <div class="action-buttons">
+                <a href="#" class="btn btn-primary">Add New User</a>
+                <a href="#" class="btn btn-secondary">View Reports</a>
+                <a href="#" class="btn btn-secondary">Settings</a>
+            </div>
+        </div>
+
+        <div class="recent-activity">
+            <h3>Recent Activity</h3>
+            <ul class="activity-list">
+                {% for activity in recent_activities_list %}
+                    <li>{{ activity.description }} - {{ activity.timestamp }}</li>
+                {% empty %}
+                    <li>No recent activities</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,318 @@
+{% extends 'base.html' %}
+
+{% block title %}User Management - Admin Panel{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1>User Management</h1>
+        <p>Manage system users and their permissions</p>
+        <div class="header-actions">
+            <a href="#" class="btn btn-primary">Add New User</a>
+            <a href="{% url 'accounts:admin_dashboard' %}" class="btn btn-secondary">Back to Dashboard</a>
+        </div>
+    </div>
+
+    <div class="users-stats">
+        <div class="stat-card">
+            <h3>Total Users</h3>
+            <span class="stat-number">{{ total_users }}</span>
+        </div>
+        <div class="stat-card">
+            <h3>Administrators</h3>
+            <span class="stat-number">{{ users|length }}</span>
+        </div>
+        <div class="stat-card">
+            <h3>Committee Members</h3>
+            <span class="stat-number">{{ users|length }}</span>
+        </div>
+    </div>
+
+    <div class="users-table-container">
+        <table class="users-table">
+            <thead>
+                <tr>
+                    <th>User</th>
+                    <th>Email</th>
+                    <th>User Type</th>
+                    <th>Department</th>
+                    <th>Employee ID</th>
+                    <th>Active Evaluator</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                    <tr>
+                        <td>
+                            <div class="user-info">
+                                <strong>{{ user.get_full_name|default:user.username }}</strong>
+                                <small>@{{ user.username }}</small>
+                            </div>
+                        </td>
+                        <td>{{ user.email|default:"No email" }}</td>
+                        <td>
+                            <span class="user-type-badge user-type-{{ user.profile.user_type }}">
+                                {{ user.profile.get_user_type_display }}
+                            </span>
+                        </td>
+                        <td>{{ user.profile.department|default:"Not specified" }}</td>
+                        <td>{{ user.profile.employee_id|default:"Not assigned" }}</td>
+                        <td>
+                            {% if user.profile.is_active_evaluator %}
+                                <span class="status-badge status-active">Active</span>
+                            {% else %}
+                                <span class="status-badge status-inactive">Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if user.is_active %}
+                                <span class="status-badge status-active">Active</span>
+                            {% else %}
+                                <span class="status-badge status-inactive">Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="action-buttons">
+                                <a href="#" class="btn btn-sm btn-info">View</a>
+                                <a href="#" class="btn btn-sm btn-warning">Edit</a>
+                                {% if user != request.user %}
+                                    {% if user.is_active %}
+                                        <a href="#" class="btn btn-sm btn-danger">Deactivate</a>
+                                    {% else %}
+                                        <a href="#" class="btn btn-sm btn-success">Activate</a>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="8" class="no-users">No users found.</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="user-types-info">
+        <h3>User Type Permissions</h3>
+        <div class="permissions-grid">
+            <div class="permission-card">
+                <h4>System Administrator</h4>
+                <ul>
+                    <li>✓ Add and manage candidate data</li>
+                    <li>✓ Manage evaluation process</li>
+                    <li>✓ Generate reports</li>
+                    <li>✓ Manage users and permissions</li>
+                    <li>✓ View all evaluation results</li>
+                    <li>✓ System configuration</li>
+                </ul>
+            </div>
+            <div class="permission-card">
+                <h4>Evaluation Committee Member</h4>
+                <ul>
+                    <li>✓ View candidate cards and data</li>
+                    <li>✓ Evaluate candidates (if active)</li>
+                    <li>✓ Access random questions</li>
+                    <li>✓ View evaluation criteria</li>
+                    <li>✗ Manage candidate data</li>
+                    <li>✗ Generate reports</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.header-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.users-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 8px;
+    text-align: center;
+    border-left: 4px solid #007bff;
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #007bff;
+    display: block;
+    margin-top: 0.5rem;
+}
+
+.users-table-container {
+    background: white;
+    border-radius: 8px;
+    overflow-x: auto;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+}
+
+.users-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.users-table th,
+.users-table td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.users-table th {
+    background: #f8f9fa;
+    font-weight: 600;
+    color: #495057;
+}
+
+.user-info strong {
+    display: block;
+}
+
+.user-info small {
+    color: #6c757d;
+}
+
+.user-type-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.user-type-admin {
+    background: #d4edda;
+    color: #155724;
+}
+
+.user-type-committee {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+.status-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.status-active {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-inactive {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 0.25rem;
+    flex-wrap: wrap;
+}
+
+.no-users {
+    text-align: center;
+    color: #6c757d;
+    font-style: italic;
+}
+
+.user-types-info {
+    background: #f8f9fa;
+    padding: 2rem;
+    border-radius: 8px;
+}
+
+.permissions-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-top: 1rem;
+}
+
+.permission-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.permission-card h4 {
+    margin-bottom: 1rem;
+    color: #495057;
+}
+
+.permission-card ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.permission-card li {
+    margin: 0.5rem 0;
+    padding-left: 1rem;
+}
+
+.btn {
+    padding: 0.5rem 1rem;
+    text-decoration: none;
+    border-radius: 4px;
+    display: inline-block;
+    text-align: center;
+    font-size: 0.875rem;
+}
+
+.btn-primary { background: #007bff; color: white; }
+.btn-secondary { background: #6c757d; color: white; }
+.btn-info { background: #17a2b8; color: white; }
+.btn-warning { background: #ffc107; color: #212529; }
+.btn-success { background: #28a745; color: white; }
+.btn-danger { background: #dc3545; color: white; }
+
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+}
+
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .permissions-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .users-table {
+        font-size: 0.875rem;
+    }
+}
+</style>
+{% endblock %}

@@ -1,0 +1,564 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ plan.title }} - تفاصيل الخطة{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="plan-header">
+        <div class="header-content">
+            <h1>{{ plan.title }}</h1>
+            <p class="plan-department">لصالح: {{ plan.department }}</p>
+        </div>
+        <div class="header-actions">
+            <a href="{% url 'students:plan_list' %}" class="btn btn-secondary">
+                <i class="icon-back"></i>
+                العودة للقائمة
+            </a>
+            {% if can_manage %}
+                <a href="{% url 'students:plan_update' plan.pk %}" class="btn btn-primary">
+                    <i class="icon-edit"></i>
+                    تعديل الخطة
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="plan-content">
+        <!-- Plan Information -->
+        <div class="info-section">
+            <h2>معلومات الخطة</h2>
+            <div class="info-grid">
+                <div class="info-card">
+                    <h4>التفاصيل الأساسية</h4>
+                    <div class="info-row">
+                        <span class="label">اسم الخطة:</span>
+                        <span class="value">{{ plan.title }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">لصالح:</span>
+                        <span class="value">{{ plan.department }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">عدد المرشحين:</span>
+                        <span class="value highlight">{{ total_candidates }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">تاريخ الإنشاء:</span>
+                        <span class="value">{{ plan.created_at|date:"Y/m/d H:i" }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notes -->
+        {% if plan.notes %}
+            <div class="notes-section">
+                <h2>ملاحظات</h2>
+                <div class="notes-content">
+                    {{ plan.notes|linebreaks }}
+                </div>
+            </div>
+        {% endif %}
+
+        <!-- Candidates Section -->
+        <div class="candidates-section">
+            <div class="section-header">
+                <h2>المرشحين المتقدمين ({{ total_candidates }})</h2>
+                <div class="section-actions">
+                    <a href="{% url 'students:candidate_create' %}" class="btn btn-success">
+                        <i class="icon-add"></i>
+                        إضافة مرشحين
+                    </a>
+                    {% if total_candidates > 0 %}
+                        <a href="{% url 'students:plan_evaluation' plan.pk %}" class="btn btn-info">
+                            <i class="icon-evaluate"></i>
+                            بدء التقييم
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if candidates %}
+                <div class="candidates-list">
+                    {% for candidate in candidates %}
+                        <div class="candidate-card">
+                            <div class="candidate-avatar">
+                                <img src="{{ candidate.get_profile_image_url }}" alt="{{ candidate.student_name }}">
+                            </div>
+
+                            <div class="candidate-info">
+                                <h4>{{ candidate.student_name|default:"غير محدد" }}</h4>
+                                <div class="candidate-details">
+                                    <span class="detail-item">
+                                        <strong>المؤهل:</strong> {{ candidate.primary_qualification|default:"غير محدد" }}
+                                    </span>
+                                    <span class="detail-item">
+                                        <strong>الجامعة:</strong> {{ candidate.university|default:"غير محدد" }}
+                                    </span>
+                                    <span class="detail-item">
+                                        <strong>العمر:</strong> {{ candidate.age|default:"غير محدد" }} سنة
+                                    </span>
+                                    <span class="detail-item">
+                                        <strong>حالة التقديم:</strong>
+                                        <span class="application-status status-{{ candidate.application_status }}">
+                                            {{ candidate.get_application_status_display }}
+                                        </span>
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="candidate-actions">
+                                <a href="{% url 'students:candidate_detail' candidate.pk %}" class="btn btn-sm btn-info">
+                                    <i class="icon-view"></i>
+                                    عرض
+                                </a>
+                                <a href="{% url 'students:candidate_update' candidate.pk %}" class="btn btn-sm btn-primary">
+                                    <i class="icon-edit"></i>
+                                    تعديل
+                                </a>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Pagination -->
+                {% if candidates.has_other_pages %}
+                    <div class="pagination">
+                        {% if candidates.has_previous %}
+                            <a href="?page={{ candidates.previous_page_number }}" class="page-btn">السابق</a>
+                        {% endif %}
+
+                        <span class="page-info">
+                            صفحة {{ candidates.number }} من {{ candidates.paginator.num_pages }}
+                        </span>
+
+                        {% if candidates.has_next %}
+                            <a href="?page={{ candidates.next_page_number }}" class="page-btn">التالي</a>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            {% else %}
+                <div class="empty-candidates">
+                    <div class="empty-icon">👥</div>
+                    <h3>لا يوجد مرشحين لهذه الخطة</h3>
+                    <p>لم يتم تعيين أي مرشحين لهذه الخطة بعد.</p>
+                    <a href="{% url 'students:candidate_create' %}" class="btn btn-primary">
+                        إضافة مرشحين للخطة
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    direction: rtl;
+}
+
+.plan-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 30px;
+    border-radius: 10px;
+    margin-bottom: 25px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header-content h1 {
+    margin: 0 0 10px 0;
+    font-size: 2.2rem;
+}
+
+.header-actions {
+    display: flex;
+    gap: 15px;
+}
+
+.plan-content {
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+}
+
+.info-section {
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.info-section h2 {
+    margin: 0 0 20px 0;
+    color: #495057;
+    font-size: 1.5rem;
+    border-bottom: 2px solid #e9ecef;
+    padding-bottom: 10px;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+.info-card {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    border-right: 4px solid #667eea;
+}
+
+.info-card h4 {
+    margin: 0 0 15px 0;
+    color: #495057;
+    font-size: 1.1rem;
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.info-row:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.info-row .label {
+    font-weight: bold;
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.info-row .value {
+    color: #495057;
+    font-size: 0.9rem;
+}
+
+.info-row .value.highlight {
+    background: #e3f2fd;
+    padding: 4px 8px;
+    border-radius: 4px;
+    color: #1976d2;
+    font-weight: bold;
+}
+
+.status-badge {
+    padding: 8px 15px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: bold;
+}
+
+.status-active {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-inactive {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.status-expired {
+    background: #ffeaa7;
+    color: #d63031;
+}
+
+.description-section,
+.skills-section {
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.description-section h2,
+.skills-section h2 {
+    margin: 0 0 15px 0;
+    color: #495057;
+    font-size: 1.5rem;
+}
+
+.description-content,
+.skills-content {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    border-right: 4px solid #28a745;
+    line-height: 1.6;
+    color: #495057;
+}
+
+.candidates-section {
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.section-header h2 {
+    margin: 0;
+    color: #495057;
+    font-size: 1.5rem;
+}
+
+.section-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.candidates-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.candidate-card {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    transition: all 0.3s ease;
+}
+
+.candidate-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.candidate-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.candidate-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.avatar-placeholder {
+    width: 100%;
+    height: 100%;
+    background: #667eea;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
+.candidate-info {
+    flex: 1;
+}
+
+.candidate-info h4 {
+    margin: 0 0 10px 0;
+    color: #495057;
+    font-size: 1.1rem;
+}
+
+.candidate-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 8px;
+}
+
+.detail-item {
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+.application-status {
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: bold;
+}
+
+.status-applied {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.status-screening {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+.status-interview_scheduled {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.candidate-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.empty-candidates {
+    text-align: center;
+    padding: 60px 20px;
+    color: #6c757d;
+}
+
+.empty-icon {
+    font-size: 4rem;
+    margin-bottom: 20px;
+}
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #e9ecef;
+}
+
+.page-btn {
+    padding: 8px 16px;
+    background: #667eea;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    transition: background 0.3s ease;
+}
+
+.page-btn:hover {
+    background: #5a67d8;
+}
+
+.page-info {
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: bold;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+}
+
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+}
+
+.btn-primary {
+    background: #667eea;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #5a67d8;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+}
+
+.btn-success {
+    background: #28a745;
+    color: white;
+}
+
+.btn-success:hover {
+    background: #218838;
+}
+
+.btn-info {
+    background: #17a2b8;
+    color: white;
+}
+
+.btn-info:hover {
+    background: #138496;
+}
+
+/* Icons */
+.icon-back::before { content: "⬅️ "; }
+.icon-edit::before { content: "✏️ "; }
+.icon-add::before { content: "➕ "; }
+.icon-evaluate::before { content: "📊 "; }
+.icon-view::before { content: "👁️ "; }
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .plan-header {
+        flex-direction: column;
+        gap: 15px;
+        text-align: center;
+    }
+
+    .header-actions {
+        justify-content: center;
+    }
+
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .section-header {
+        flex-direction: column;
+        gap: 15px;
+        align-items: stretch;
+    }
+
+    .section-actions {
+        justify-content: center;
+    }
+
+    .candidate-card {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .candidate-details {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}

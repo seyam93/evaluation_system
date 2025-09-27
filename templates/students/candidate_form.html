@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} - نظام التوظيف</title>
+    {% load static %}
+    <link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet">
+    <link href="{% static 'css/bootstrap-icons.css' %}" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
+        <div class="container">
+            <a href="{% url 'students:candidate_list' %}" class="navbar-brand fw-bold">
+                <i class="bi bi-people-fill me-2"></i>نظام التوظيف
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a href="{% url 'students:candidate_list' %}" class="nav-link">
+                    <i class="bi bi-list-ul me-1"></i>المرشحين
+                </a>
+                <a href="{% url 'students:candidate_create' %}" class="nav-link active">
+                    <i class="bi bi-person-plus me-1"></i>إضافة مرشح
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container py-4">
+        <div class="row justify-content-center">
+            <div class="col-lg-10 col-xl-8">
+                <!-- Header Card -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-gradient bg-primary text-white">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-person-plus-fill fs-4 me-3"></i>
+                            <h3 class="mb-0">{{ title|default:"إضافة مرشح جديد" }}</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main Form Card -->
+                <div class="card shadow-sm">
+                    <div class="card-body p-4">
+                        <form id="candidate-form" method="post" enctype="multipart/form-data">
+                            {% csrf_token %}
+
+                            <!-- Plan Selection Section -->
+                            <div class="alert alert-info border-0 shadow-sm mb-4">
+                                <div class="d-flex align-items-center mb-3">
+                                    <i class="bi bi-clipboard-check fs-5 me-2"></i>
+                                    <h5 class="mb-0">خطة التوظيف</h5>
+                                    <span class="badge bg-danger ms-2">مطلوب</span>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="{{ form.plan.id_for_label }}" class="form-label fw-bold">
+                                        اختر الخطة المناسبة
+                                    </label>
+                                    {{ form.plan }}
+                                    {% if form.plan.errors %}
+                                        {% for error in form.plan.errors %}
+                                            <div class="invalid-feedback d-block">{{ error }}</div>
+                                        {% endfor %}
+                                    {% endif %}
+                                </div>
+                                <small class="text-muted">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    اختر خطة التوظيف التي سيتقدم لها هذا المرشح
+                                </small>
+                            </div>
+
+                            <!-- Personal Information Section -->
+                            <div class="card border-0 bg-light mb-4">
+                                <div class="card-header bg-transparent border-0 pb-0">
+                                    <h5 class="text-primary mb-0">
+                                        <i class="bi bi-person-circle me-2"></i>المعلومات الشخصية
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label for="{{ form.student_name.id_for_label }}" class="form-label fw-semibold">
+                                                <i class="bi bi-person me-1"></i>الاسم الكامل
+                                                <span class="text-danger">*</span>
+                                            </label>
+                                            {{ form.student_name }}
+                                            {% if form.student_name.errors %}
+                                                {% for error in form.student_name.errors %}
+                                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                                {% endfor %}
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="{{ form.email.id_for_label }}" class="form-label fw-semibold">
+                                                <i class="bi bi-envelope me-1"></i>البريد الإلكتروني
+                                                <span class="text-danger">*</span>
+                                            </label>
+                                            {{ form.email }}
+                                            {% if form.email.errors %}
+                                                {% for error in form.email.errors %}
+                                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                                {% endfor %}
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Contact Information Section -->
+                            <div class="card border-0 bg-light mb-4">
+                                <div class="card-header bg-transparent border-0 pb-0">
+                                    <h5 class="text-primary mb-0">
+                                        <i class="bi bi-telephone me-2"></i>معلومات الاتصال والبيانات الشخصية
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label for="{{ form.phone_number.id_for_label }}" class="form-label fw-semibold">
+                                                <i class="bi bi-phone me-1"></i>رقم الهاتف
+                                                <span class="text-danger">*</span>
+                                            </label>
+                                            {{ form.phone_number }}
+                                            {% if form.phone_number.errors %}
+                                                {% for error in form.phone_number.errors %}
+                                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                                {% endfor %}
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="{{ form.birth_date.id_for_label }}" class="form-label fw-semibold">
+                                                <i class="bi bi-calendar-date me-1"></i>تاريخ الميلاد
+                                                <span class="text-danger">*</span>
+                                            </label>
+                                            {{ form.birth_date }}
+                                            {% if form.birth_date.errors %}
+                                                {% for error in form.birth_date.errors %}
+                                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                                {% endfor %}
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label for="{{ form.gender.id_for_label }}" class="form-label fw-semibold">
+                                                <i class="bi bi-gender-ambiguous me-1"></i>الجنس
+                                                <span class="text-danger">*</span>
+                                            </label>
+                                            {{ form.gender }}
+                                            {% if form.gender.errors %}
+                                                {% for error in form.gender.errors %}
+                                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                                {% endfor %}
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label for="{{ form.marital_status.id_for_label }}" class="form-label fw-semibold">
+                                                <i class="bi bi-heart me-1"></i>الحالة الاجتماعية
+                                            </label>
+                                            {{ form.marital_status }}
+                                            {% if form.marital_status.errors %}
+                                                {% for error in form.marital_status.errors %}
+                                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                                {% endfor %}
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label for="{{ form.number_of_children.id_for_label }}" class="form-label fw-semibold">
+                                                <i class="bi bi-people me-1"></i>عدد الأطفال
+                                            </label>
+                                            {{ form.number_of_children }}
+                                            {% if form.number_of_children.errors %}
+                                                {% for error in form.number_of_children.errors %}
+                                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                                {% endfor %}
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Education Information Section -->
+                            <div class="card border-0 bg-light mb-4">
+                                <div class="card-header bg-transparent border-0 pb-0">
+                                    <h5 class="text-primary mb-0">
+                                        <i class="bi bi-mortarboard me-2"></i>المعلومات التعليمية
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label for="{{ form.primary_qualification.id_for_label }}" class="form-label fw-semibold">
+                                                <i class="bi bi-award me-1"></i>المؤهل الأساسي
+                                                <span class="text-danger">*</span>
+                                            </label>
+                                            {{ form.primary_qualification }}
+                                            {% if form.primary_qualification.errors %}
+                                                {% for error in form.primary_qualification.errors %}
+                                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                                {% endfor %}
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="{{ form.university.id_for_label }}" class="form-label fw-semibold">
+                                                <i class="bi bi-building me-1"></i>الجامعة/المؤسسة
+                                                <span class="text-danger">*</span>
+                                            </label>
+                                            {{ form.university }}
+                                            {% if form.university.errors %}
+                                                {% for error in form.university.errors %}
+                                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                                {% endfor %}
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="{{ form.general_degree.id_for_label }}" class="form-label fw-semibold">
+                                                <i class="bi bi-star me-1"></i>التقدير العام
+                                            </label>
+                                            {{ form.general_degree }}
+                                            {% if form.general_degree.errors %}
+                                                {% for error in form.general_degree.errors %}
+                                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                                {% endfor %}
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="{{ form.graduation_year.id_for_label }}" class="form-label fw-semibold">
+                                                <i class="bi bi-calendar-event me-1"></i>سنة التخرج
+                                            </label>
+                                            {{ form.graduation_year }}
+                                            {% if form.graduation_year.errors %}
+                                                {% for error in form.graduation_year.errors %}
+                                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                                {% endfor %}
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Additional Information Section -->
+                            <div class="card border-0 bg-light mb-4">
+                                <div class="card-header bg-transparent border-0 pb-0">
+                                    <h5 class="text-primary mb-0">
+                                        <i class="bi bi-info-circle me-2"></i>معلومات إضافية
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row g-3">
+                                        <div class="col-md-12">
+                                            <label for="{{ form.address.id_for_label }}" class="form-label fw-semibold">
+                                                <i class="bi bi-geo-alt me-1"></i>العنوان
+                                            </label>
+                                            {{ form.address }}
+                                            {% if form.address.errors %}
+                                                {% for error in form.address.errors %}
+                                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                                {% endfor %}
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-12">
+                                            <label for="{{ form.personal_image.id_for_label }}" class="form-label fw-semibold">
+                                                <i class="bi bi-image me-1"></i>الصورة الشخصية
+                                            </label>
+                                            {{ form.personal_image }}
+                                            {% if form.personal_image.errors %}
+                                                {% for error in form.personal_image.errors %}
+                                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                                {% endfor %}
+                                            {% endif %}
+                                            <div class="form-text">
+                                                <i class="bi bi-info-circle me-1"></i>
+                                                ارفع صورة شخصية احترافية (JPG, PNG)
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Qualifications Section -->
+                            <div class="card border-0 bg-light mb-4">
+                                <div class="card-header bg-transparent border-0 pb-0">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h5 class="text-primary mb-0">
+                                            <i class="bi bi-mortarboard-fill me-2"></i>التأهيل العلمى
+                                        </h5>
+                                        <span class="badge bg-info">اختياري</span>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div id="qualifications-section">
+                                        <div class="qualification-entry mb-3">
+                                            <div class="row g-3">
+                                                <div class="col-md-8">
+                                                    <label class="form-label fw-semibold">
+                                                        <i class="bi bi-award me-1"></i>اسم المؤهل
+                                                    </label>
+                                                    <input type="text" name="qualification_name_1" class="form-control" placeholder="مثال: بكالوريوس علوم الحاسوب">
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <label class="form-label fw-semibold">
+                                                        <i class="bi bi-calendar3 me-1"></i>تاريخ التخرج
+                                                    </label>
+                                                    <input type="date" name="qualification_date_1" class="form-control">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="addQualification()">
+                                        <i class="bi bi-plus-circle me-1"></i>إضافة مؤهل آخر
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Experience Section -->
+                            <div class="card border-0 bg-light mb-4">
+                                <div class="card-header bg-transparent border-0 pb-0">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h5 class="text-primary mb-0">
+                                            <i class="bi bi-briefcase-fill me-2"></i>الخبرات العملية
+                                        </h5>
+                                        <span class="badge bg-info">اختياري</span>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div id="experience-section">
+                                        <div class="experience-entry mb-3">
+                                            <div class="row g-3">
+                                                <div class="col-md-6">
+                                                    <label class="form-label fw-semibold">
+                                                        <i class="bi bi-person-workspace me-1"></i>المسمى الوظيفي
+                                                    </label>
+                                                    <input type="text" name="job_title_1" class="form-control" placeholder="مثال: مطور برمجيات">
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label class="form-label fw-semibold">
+                                                        <i class="bi bi-building me-1"></i>اسم الشركة
+                                                    </label>
+                                                    <input type="text" name="company_name_1" class="form-control" placeholder="مثال: شركة التقنية المتقدمة">
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label class="form-label fw-semibold">
+                                                        <i class="bi bi-calendar-check me-1"></i>تاريخ البداية
+                                                    </label>
+                                                    <input type="date" name="start_date_1" class="form-control">
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label class="form-label fw-semibold">
+                                                        <i class="bi bi-calendar-x me-1"></i>تاريخ النهاية
+                                                    </label>
+                                                    <input type="date" name="end_date_1" class="form-control">
+                                                    <div class="form-text">
+                                                        <i class="bi bi-info-circle me-1"></i>
+                                                        اتركه فارغاً إذا كان العمل مستمراً
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="addExperience()">
+                                        <i class="bi bi-plus-circle me-1"></i>إضافة خبرة أخرى
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Previous Tests Section -->
+                            <div class="card border-0 bg-light mb-4">
+                                <div class="card-header bg-transparent border-0 pb-0">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h5 class="text-primary mb-0">
+                                            <i class="bi bi-clipboard-data me-2"></i>الاختبارات السابقة
+                                        </h5>
+                                        <span class="badge bg-info">اختياري</span>
+                                    </div>
+                                    <small class="text-muted">
+                                        <i class="bi bi-info-circle me-1"></i>
+                                        أدخل درجات الاختبارات التي تم أداؤها قبل دخول البيانات في النظام
+                                    </small>
+                                </div>
+                                <div class="card-body">
+                                    {% if previous_test_form %}
+                                        <div class="row g-3">
+                                            {% for template_field in previous_test_form.get_template_fields %}
+                                                <div class="col-md-6">
+                                                    <label for="{{ template_field.field.id_for_label }}" class="form-label fw-semibold">
+                                                        <i class="bi bi-clipboard-data me-1"></i>{{ template_field.field.label }}
+                                                    </label>
+                                                    {{ template_field.field }}
+                                                    {% if template_field.field.errors %}
+                                                        {% for error in template_field.field.errors %}
+                                                            <div class="invalid-feedback d-block">{{ error }}</div>
+                                                        {% endfor %}
+                                                    {% endif %}
+                                                    {% if template_field.field.help_text %}
+                                                        <div class="form-text">{{ template_field.field.help_text }}</div>
+                                                    {% endif %}
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                        {% if previous_test_form.get_template_fields %}
+                                            <div class="form-text mt-3">
+                                                <i class="bi bi-info-circle me-1"></i>
+                                                اترك الحقل فارغاً إذا لم يتم أداء الاختبار.
+                                            </div>
+                                        {% else %}
+                                            <div class="alert alert-info">
+                                                <i class="bi bi-info-circle me-2"></i>
+                                                لا توجد قوالب اختبارات سابقة متاحة حالياً. يمكن إضافتها من لوحة الإدارة.
+                                            </div>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- Form Actions -->
+                            <div class="d-grid gap-2 d-md-flex justify-content-md-between pt-4 border-top">
+                                <a href="{% url 'students:candidate_list' %}" class="btn btn-outline-secondary btn-lg">
+                                    <i class="bi bi-arrow-left me-2"></i>إلغاء والعودة
+                                </a>
+                                <button type="submit" class="btn btn-primary btn-lg px-5">
+                                    <i class="bi bi-check-circle me-2"></i>{{ submit_text|default:"إنشاء مرشح" }}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
+    <script>
+        let qualificationCount = 1;
+        let experienceCount = 1;
+
+        // Add new qualification entry
+        function addQualification() {
+            qualificationCount++;
+            const qualificationsSection = document.getElementById('qualifications-section');
+            const newQualification = document.createElement('div');
+            newQualification.className = 'qualification-entry mb-3';
+            newQualification.innerHTML = `
+                <div class="row g-3">
+                    <div class="col-md-7">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-award me-1"></i>اسم المؤهل
+                        </label>
+                        <input type="text" name="qualification_name_${qualificationCount}" class="form-control" placeholder="مثال: بكالوريوس علوم الحاسوب">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-calendar3 me-1"></i>تاريخ التخرج
+                        </label>
+                        <input type="date" name="qualification_date_${qualificationCount}" class="form-control">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label fw-semibold">&nbsp;</label>
+                        <button type="button" class="btn btn-outline-danger btn-sm w-100" onclick="removeQualification(this)">
+                            <i class="bi bi-trash me-1"></i>حذف
+                        </button>
+                    </div>
+                </div>
+            `;
+            qualificationsSection.appendChild(newQualification);
+        }
+
+        // Add new experience entry
+        function addExperience() {
+            experienceCount++;
+            const experienceSection = document.getElementById('experience-section');
+            const newExperience = document.createElement('div');
+            newExperience.className = 'experience-entry mb-3';
+            newExperience.innerHTML = `
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-person-workspace me-1"></i>المسمى الوظيفي
+                        </label>
+                        <input type="text" name="job_title_${experienceCount}" class="form-control" placeholder="مثال: مطور برمجيات">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-building me-1"></i>اسم الشركة
+                        </label>
+                        <input type="text" name="company_name_${experienceCount}" class="form-control" placeholder="مثال: شركة التقنية المتقدمة">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-calendar-check me-1"></i>تاريخ البداية
+                        </label>
+                        <input type="date" name="start_date_${experienceCount}" class="form-control">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-calendar-x me-1"></i>تاريخ النهاية
+                        </label>
+                        <input type="date" name="end_date_${experienceCount}" class="form-control">
+                        <div class="form-text">
+                            <i class="bi bi-info-circle me-1"></i>
+                            اتركه فارغاً إذا كان العمل مستمراً
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">&nbsp;</label>
+                        <button type="button" class="btn btn-outline-danger btn-sm w-100" onclick="removeExperience(this)">
+                            <i class="bi bi-trash me-1"></i>حذف الخبرة
+                        </button>
+                    </div>
+                </div>
+            `;
+            experienceSection.appendChild(newExperience);
+        }
+
+        // Remove qualification entry
+        function removeQualification(button) {
+            button.closest('.qualification-entry').remove();
+        }
+
+        // Remove experience entry
+        function removeExperience(button) {
+            button.closest('.experience-entry').remove();
+        }
+
+        // Auto-calculate age from birth date
+        const birthDateField = document.querySelector('input[name="birth_date"]');
+        if (birthDateField) {
+            birthDateField.addEventListener('change', function() {
+                const birthDate = this.value;
+                if (birthDate) {
+                    const age = calculateAge(birthDate);
+                    console.log('Calculated age:', age);
+
+                    if (age < 16) {
+                        showAlert('عمر المرشح يجب أن يكون 16 سنة على الأقل.', 'warning');
+                    } else if (age > 100) {
+                        showAlert('يرجى التحقق من تاريخ الميلاد.', 'warning');
+                    }
+                }
+            });
+        }
+
+        // Form submission handler
+        document.getElementById('candidate-form').addEventListener('submit', function(e) {
+            // Don't prevent default - let Django handle the form submission
+            // e.preventDefault();
+
+            // if (validateForm(this)) {
+            //     showAlert('تم حفظ معلومات المرشح بنجاح!', 'success');
+            //     // In a real application, this would submit to the server
+            //     console.log('Form would be submitted to server');
+            // } else {
+            //     showAlert('يرجى تصحيح الأخطاء والمحاولة مرة أخرى.', 'danger');
+            // }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,501 @@
+{% extends 'base.html' %}
+
+{% block title %}المرشحين - نظام إدارة التوظيف{% endblock %}
+
+{% block extra_css %}
+<style>
+    .students-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+        padding: 20px;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .students-stats {
+        display: flex;
+        gap: 20px;
+    }
+
+    .stat-item {
+        text-align: center;
+    }
+
+    .stat-number {
+        font-size: 24px;
+        font-weight: bold;
+        color: #04463b;
+    }
+
+    .stat-label {
+        font-size: 14px;
+        color: #666;
+    }
+
+    .search-box {
+        max-width: 300px;
+    }
+
+    .search-box input {
+        padding: 10px;
+        border: 2px solid #ddd;
+        border-radius: 25px;
+        width: 100%;
+        font-size: 16px;
+    }
+
+    .search-box input:focus {
+        outline: none;
+        border-color: #0066cc;
+    }
+
+    .plan-section {
+        margin-bottom: 40px;
+        background: white;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .plan-header {
+        background: linear-gradient(135deg, #04463b, #0066cc);
+        color: white;
+        padding: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .plan-title {
+        font-size: 20px;
+        font-weight: bold;
+        margin: 0;
+    }
+
+    .plan-count {
+        background: rgba(255,255,255,0.2);
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 14px;
+    }
+
+    .students-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 20px;
+        padding: 20px;
+    }
+
+    .student-card {
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 15px;
+        background: #fafafa;
+        display: flex;
+        flex-direction: row-reverse;
+        align-items: center;
+        gap: 20px;
+        min-height: 140px;
+    }
+
+    .student-avatar {
+        width: 110px;
+        height: 110px;
+        border-radius: 50%;
+        overflow: hidden;
+        flex-shrink: 0;
+    }
+
+    .student-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .student-content {
+        flex: 1;
+    }
+
+    .student-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border-color: #0066cc;
+    }
+
+    .student-name {
+        font-size: 18px;
+        font-weight: bold;
+        color: #04463b;
+        margin-bottom: 10px;
+        text-align: right;
+    }
+
+    .student-info {
+        font-size: 14px;
+        color: #666;
+        line-height: 1.6;
+        text-align: right;
+    }
+
+    .student-info strong {
+        color: #333;
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: bold;
+        margin-top: 10px;
+    }
+
+    .status-applied { background: #e3f2fd; color: #1976d2; }
+    .status-screening { background: #fff3e0; color: #f57c00; }
+    .status-interview { background: #f3e5f5; color: #7b1fa2; }
+    .status-accepted { background: #e8f5e8; color: #388e3c; }
+    .status-rejected { background: #ffebee; color: #d32f2f; }
+
+    .degree-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-size: 11px;
+        font-weight: bold;
+    }
+
+    .degree-excellent { background: #c8e6c9; color: #2e7d32; }
+    .degree-very-good { background: #bbdefb; color: #1976d2; }
+    .degree-good { background: #fff9c4; color: #f57f17; }
+    .degree-sufficient { background: #f0f0f0; color: #616161; }
+
+    .no-students {
+        text-align: center;
+        padding: 40px;
+        color: #666;
+        font-style: italic;
+    }
+
+    .student-actions {
+        margin-top: 10px;
+        display: flex;
+        gap: 10px;
+    }
+
+    .btn-small {
+        padding: 6px 12px;
+        font-size: 12px;
+        border-radius: 4px;
+        text-decoration: none;
+        border: none;
+        cursor: pointer;
+    }
+
+    .btn-view {
+        background: #0066cc;
+        color: white;
+    }
+
+    .btn-edit {
+        background: #28a745;
+        color: white;
+    }
+
+    .btn-view:hover { background: #004080; }
+    .btn-edit:hover { background: #1e7e34; }
+
+    .plan-actions {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .btn {
+        padding: 8px 16px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-weight: bold;
+        font-size: 14px;
+        transition: background-color 0.3s ease;
+        border: none;
+        cursor: pointer;
+    }
+
+    .btn-secondary {
+        background-color: #6c757d;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background-color: #5a6268;
+        color: white;
+        text-decoration: none;
+    }
+
+    .btn-info {
+        background-color: #17a2b8;
+        color: white;
+    }
+
+    .btn-info:hover {
+        background-color: #138496;
+        color: white;
+        text-decoration: none;
+    }
+
+    .pagination-wrapper {
+        display: flex;
+        justify-content: center;
+        margin-top: 30px;
+    }
+
+    .pagination {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        padding: 20px;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .page-link {
+        padding: 8px 16px;
+        background: #0066cc;
+        color: white;
+        text-decoration: none;
+        border-radius: 6px;
+        font-weight: bold;
+        transition: background-color 0.3s ease;
+    }
+
+    .page-link:hover {
+        background: #004080;
+        color: white;
+        text-decoration: none;
+    }
+
+    .page-info {
+        font-weight: bold;
+        color: #333;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Page Header -->
+    <div class="students-header">
+        <div>
+            {% if single_plan_view %}
+                <h1>مرشحو خطة: {{ plan.title }}</h1>
+                <div class="students-stats">
+                    <div class="stat-item">
+                        <div class="stat-number">{{ total_candidates }}</div>
+                        <div class="stat-label">إجمالي المرشحين</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">{{ plan.department }}</div>
+                        <div class="stat-label">القسم</div>
+                    </div>
+                </div>
+            {% else %}
+                <h1>إدارة المرشحين</h1>
+                <div class="students-stats">
+                    <div class="stat-item">
+                        <div class="stat-number">{{ total_candidates }}</div>
+                        <div class="stat-label">إجمالي المرشحين</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">{{ plans_count }}</div>
+                        <div class="stat-label">الخطط النشطة</div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+        <div class="search-box">
+            <input type="text" placeholder="البحث في المرشحين..." id="searchInput">
+        </div>
+    </div>
+
+    {% if single_plan_view %}
+        <!-- Single Plan View -->
+        <div class="plan-section">
+            <div class="plan-header">
+                <div>
+                    <h2 class="plan-title">{{ plan.title }}</h2>
+                    <small>{{ plan.department }}</small>
+                </div>
+                <div class="plan-actions">
+                    <a href="{% url 'students:candidate_list' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-right"></i> عرض جميع الخطط
+                    </a>
+                    <a href="{% url 'students:plan_detail' plan.id %}" class="btn btn-info">
+                        <i class="fas fa-eye"></i> تفاصيل الخطة
+                    </a>
+                </div>
+            </div>
+
+            {% if candidates %}
+                <div class="students-grid">
+                    {% for candidate in candidates %}
+                        <div class="student-card">
+                            <div class="student-avatar">
+                                <img src="{{ candidate.get_profile_image_url }}" alt="{{ candidate.student_name }}">
+                            </div>
+                            <div class="student-content">
+                                <div class="student-name">{{ candidate.student_name }}</div>
+                                <div class="student-info">
+                                <strong>العمر:</strong> {{ candidate.age|default:"غير محدد" }} سنة<br>
+                                <strong>المؤهل:</strong> {{ candidate.primary_qualification|default:"غير محدد" }}<br>
+                                <strong>الجامعة:</strong> {{ candidate.university|default:"غير محدد" }}<br>
+                                <strong>التقدير:</strong>
+                                {% if candidate.general_degree == 'Excellent' %}
+                                    <span class="degree-badge degree-excellent">ممتاز</span>
+                                {% elif candidate.general_degree == 'Very Good' %}
+                                    <span class="degree-badge degree-very-good">جيد جداً</span>
+                                {% elif candidate.general_degree == 'Good' %}
+                                    <span class="degree-badge degree-good">جيد</span>
+                                {% elif candidate.general_degree == 'Sufficient' %}
+                                    <span class="degree-badge degree-sufficient">مقبول</span>
+                                {% else %}
+                                    غير محدد
+                                {% endif %}<br>
+                                <strong>تاريخ التقديم:</strong> {{ candidate.application_date|date:"Y/m/d" }}<br>
+                                <span class="status-badge status-{{ candidate.status|lower }}">{{ candidate.get_status_display }}</span>
+                                </div>
+                                <div class="student-actions">
+                                    <a href="{% url 'students:candidate_detail' candidate.pk %}" class="btn-small btn-view">عرض</a>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Pagination -->
+                {% if candidates.has_other_pages %}
+                <div class="pagination-wrapper">
+                    <div class="pagination">
+                        {% if candidates.has_previous %}
+                            <a href="?plan={{ plan.id }}&page={{ candidates.previous_page_number }}" class="page-link">السابق</a>
+                        {% endif %}
+
+                        <span class="page-info">
+                            صفحة {{ candidates.number }} من {{ candidates.paginator.num_pages }}
+                        </span>
+
+                        {% if candidates.has_next %}
+                            <a href="?plan={{ plan.id }}&page={{ candidates.next_page_number }}" class="page-link">التالي</a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+            {% else %}
+                <div class="no-students">
+                    <p>لا توجد مرشحين في هذه الخطة حالياً</p>
+                </div>
+            {% endif %}
+        </div>
+    {% else %}
+        <!-- All Plans View -->
+        {% for plan_data in plans_with_candidates %}
+        <div class="plan-section">
+            <div class="plan-header">
+                <div>
+                    <h2 class="plan-title">{{ plan_data.plan.title }}</h2>
+                    <small>{{ plan_data.plan.department }}</small>
+                </div>
+                <div class="plan-count">
+                    {{ plan_data.candidates|length }} مرشح
+                </div>
+            </div>
+
+            {% if plan_data.candidates %}
+                <div class="students-grid">
+                    {% for candidate in plan_data.candidates %}
+                        <div class="student-card">
+                            <div class="student-avatar">
+                                <img src="{{ candidate.get_profile_image_url }}" alt="{{ candidate.student_name }}">
+                            </div>
+                            <div class="student-content">
+                                <div class="student-name">{{ candidate.student_name }}</div>
+                                <div class="student-info">
+                                <strong>العمر:</strong> {{ candidate.age|default:"غير محدد" }} سنة<br>
+                                <strong>المؤهل:</strong> {{ candidate.primary_qualification|default:"غير محدد" }}<br>
+                                <strong>الجامعة:</strong> {{ candidate.university|default:"غير محدد" }}<br>
+                                <strong>التقدير:</strong>
+                                {% if candidate.general_degree == 'Excellent' %}
+                                    <span class="degree-badge degree-excellent">ممتاز</span>
+                                {% elif candidate.general_degree == 'Very Good' %}
+                                    <span class="degree-badge degree-very-good">جيد جداً</span>
+                                {% elif candidate.general_degree == 'Good' %}
+                                    <span class="degree-badge degree-good">جيد</span>
+                                {% elif candidate.general_degree == 'Sufficient' %}
+                                    <span class="degree-badge degree-sufficient">كافي</span>
+                                {% else %}
+                                    <span class="degree-badge degree-sufficient">غير محدد</span>
+                                {% endif %}
+                                <br>
+                                <strong>حالة الطلب:</strong>
+                                {% if candidate.application_status == 'applied' %}
+                                    <span class="status-badge status-applied">تم التقديم</span>
+                                {% elif candidate.application_status == 'screening' %}
+                                    <span class="status-badge status-screening">فرز أولي</span>
+                                {% elif candidate.application_status == 'interview_scheduled' %}
+                                    <span class="status-badge status-interview">مقابلة مجدولة</span>
+                                {% elif candidate.application_status == 'accepted' %}
+                                    <span class="status-badge status-accepted">مقبول</span>
+                                {% elif candidate.application_status == 'rejected' %}
+                                    <span class="status-badge status-rejected">مرفوض</span>
+                                {% else %}
+                                    <span class="status-badge status-applied">{{ candidate.get_application_status_display }}</span>
+                                {% endif %}
+                                </div>
+                                <div class="student-actions">
+                                    <a href="{% url 'students:candidate_detail' candidate.pk %}" class="btn-small btn-view">عرض</a>
+                                    <a href="{% url 'students:candidate_update' candidate.pk %}" class="btn-small btn-edit">تعديل</a>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="no-students">
+                    لا يوجد مرشحين في هذه الخطة حتى الآن
+                </div>
+            {% endif %}
+        </div>
+    {% empty %}
+        <div class="plan-section">
+            <div class="no-students">
+                <h3>لا توجد خطط متاحة</h3>
+                <p>قم بإنشاء خطة توظيف أولاً لعرض المرشحين</p>
+                <a href="{% url 'students:plan_create' %}" class="btn btn-primary">إنشاء خطة جديدة</a>
+            </div>
+        </div>
+    {% endfor %}
+    {% endif %}
+</div>
+
+<script>
+// Simple search functionality
+document.getElementById('searchInput').addEventListener('input', function(e) {
+    const searchTerm = e.target.value.toLowerCase();
+    const studentCards = document.querySelectorAll('.student-card');
+
+    studentCards.forEach(card => {
+        const studentName = card.querySelector('.student-name').textContent.toLowerCase();
+        const studentInfo = card.querySelector('.student-info').textContent.toLowerCase();
+
+        if (studentName.includes(searchTerm) || studentInfo.includes(searchTerm)) {
+            card.style.display = 'block';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+});
+</script>
+{% endblock %}

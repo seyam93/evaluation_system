@@ -1,0 +1,243 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <!-- Header -->
+        <div class="col-12 mb-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2 class="text-primary">{{ title }}</h2>
+                <div>
+                    <a href="{% url 'evaluation:plan_selection' %}" class="btn btn-success">
+                        <i class="fas fa-plus"></i> إنشاء جلسة جديدة
+                    </a>
+                    <a href="{% url 'evaluation:session_list' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-list"></i> جميع الجلسات
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="col-md-3 mb-4">
+            <div class="card text-white bg-primary">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h3 class="card-title">{{ total_sessions }}</h3>
+                            <p class="card-text">إجمالي الجلسات</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-calendar-alt fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-4">
+            <div class="card text-white bg-success">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h3 class="card-title">{{ completed_sessions }}</h3>
+                            <p class="card-text">الجلسات المكتملة</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-check-circle fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-4">
+            <div class="card text-white bg-warning">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h3 class="card-title">{{ active_sessions.count }}</h3>
+                            <p class="card-text">الجلسات النشطة</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-play-circle fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-4">
+            <div class="card text-white bg-info">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h3 class="card-title">{{ recent_sessions.count }}</h3>
+                            <p class="card-text">الجلسات الأخيرة</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-clock fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Active Sessions -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-play-circle text-warning"></i>
+                        الجلسات النشطة
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if active_sessions %}
+                        {% for session in active_sessions %}
+                            <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+                                <div>
+                                    <h6 class="mb-1">{{ session.plan.title }}</h6>
+                                    <small class="text-muted">
+                                        {{ session.session_date }}
+                                        {% if session.current_candidate %}
+                                            - المرشح الحالي: {{ session.current_candidate.student_name }}
+                                        {% endif %}
+                                    </small>
+                                    <div class="progress mt-1" style="height: 5px;">
+                                        <div class="progress-bar" role="progressbar"
+                                             style="width: {{ session.progress_percentage }}%"
+                                             aria-valuenow="{{ session.progress_percentage }}"
+                                             aria-valuemin="0" aria-valuemax="100">
+                                        </div>
+                                    </div>
+                                    <small class="text-muted">{{ session.progress_percentage }}% مكتمل</small>
+                                </div>
+                                <div>
+                                    <a href="{% url 'evaluation:session_detail' session.id %}"
+                                       class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye"></i> عرض
+                                    </a>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted mb-0">لا توجد جلسات نشطة حالياً</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Sessions -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-history text-info"></i>
+                        الجلسات الأخيرة
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_sessions %}
+                        {% for session in recent_sessions %}
+                            <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+                                <div>
+                                    <h6 class="mb-1">{{ session.plan.title }}</h6>
+                                    <small class="text-muted">{{ session.session_date }}</small>
+                                    <br>
+                                    <span class="badge
+                                        {% if session.status == 'completed' %}badge-success
+                                        {% elif session.status == 'active' %}badge-warning
+                                        {% elif session.status == 'paused' %}badge-secondary
+                                        {% elif session.status == 'setup' %}badge-info
+                                        {% else %}badge-danger{% endif %}">
+                                        {{ session.get_status_display }}
+                                    </span>
+                                </div>
+                                <div>
+                                    <a href="{% url 'evaluation:session_detail' session.id %}"
+                                       class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye"></i> عرض
+                                    </a>
+                                </div>
+                            </div>
+                        {% endfor %}
+                        <div class="text-center mt-3">
+                            <a href="{% url 'evaluation:session_list' %}" class="btn btn-outline-primary btn-sm">
+                                عرض جميع الجلسات
+                            </a>
+                        </div>
+                    {% else %}
+                        <p class="text-muted mb-0">لا توجد جلسات سابقة</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-bolt text-primary"></i>
+                        إجراءات سريعة
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <a href="{% url 'evaluation:plan_selection' %}" class="btn btn-outline-success btn-block">
+                                <i class="fas fa-plus"></i>
+                                إنشاء جلسة تقييم جديدة
+                            </a>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <a href="{% url 'students:plan_list' %}" class="btn btn-outline-info btn-block">
+                                <i class="fas fa-users"></i>
+                                عرض خطط التوظيف
+                            </a>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <a href="{% url 'evaluation:session_list' %}" class="btn btn-outline-primary btn-block">
+                                <i class="fas fa-chart-bar"></i>
+                                تقارير التقييم
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.card-body .progress {
+    background-color: #e9ecef;
+}
+
+.badge {
+    font-size: 0.75em;
+}
+
+.btn-block {
+    display: block;
+    width: 100%;
+}
+
+.border-bottom:last-child {
+    border-bottom: none !important;
+}
+</style>
+{% endblock %}

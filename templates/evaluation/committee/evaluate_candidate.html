@@ -1,0 +1,416 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load evaluation_extras %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2 class="text-primary">{{ title }}</h2>
+                <a href="{% url 'evaluation:committee_current_candidate' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-right"></i> العودة
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Candidate Info -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-2 text-center">
+                            <img src="{{ evaluation.candidate.get_profile_image_url }}"
+                                 alt="صورة المرشح"
+                                 class="rounded-circle"
+                                 style="width: 80px; height: 80px; object-fit: cover;">
+                        </div>
+                        <div class="col-md-6">
+                            <h5 class="mb-1 text-dark">{{ evaluation.candidate.student_name }}</h5>
+                            <p class="text-muted mb-0">{{ evaluation.session.plan.title }}</p>
+                        </div>
+                        <div class="col-md-4 text-right">
+                            <div class="text-muted">بدء التقييم: {{ evaluation.start_time|date:"H:i" }}</div>
+                            <div class="text-muted">تاريخ الجلسة: {{ evaluation.session.session_date }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <form method="post" id="evaluationForm">
+        {% csrf_token %}
+
+        <!-- Instructions for Committee -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="alert alert-info">
+                    <h6 class="alert-heading"><i class="fas fa-info-circle"></i> تعليمات للجنة</h6>
+                    <p class="mb-2">يجيب المرشح على الأسئلة شفهياً. يمكنكم مقارنة إجابته بالإجابة الصحيحة المعروضة وتقييمه على أساس:</p>
+                    <ul class="mb-0 text-dark">
+                        <li>صحة الإجابة ودقتها</li>
+                        <li>وضوح التعبير وطلاقة الحديث</li>
+                        <li>الثقة بالنفس والحضور</li>
+                        <li>المظهر والسلوك العام</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Questions Section -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-clipboard-list text-primary"></i>
+                            أسئلة التقييم
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {% for question in questions %}
+                        <div class="question-block mb-4 p-4 border rounded">
+                            <div class="row">
+                                <!-- Question Column -->
+                                <div class="col-md-6">
+                                    <h6 class="question-title text-primary mb-3">
+                                        <i class="fas fa-question-circle"></i>
+                                        السؤال {{ forloop.counter }}
+                                        <span class="badge badge-info ml-2">{{ question.get_question_type_display }}</span>
+                                    </h6>
+
+                                    <div class="question-text p-3 bg-light rounded mb-3">
+                                        <strong class="text-dark">{{ question.question_text }}</strong>
+                                    </div>
+
+                                    <!-- Multiple Choice Options (if applicable) -->
+                                    {% if question.question_type == 'mcq' %}
+                                    <div class="options mb-3">
+                                        <h6 class="text-muted mb-2">الخيارات:</h6>
+                                        {% if question.option_a %}
+                                        <div class="option mb-1">
+                                            <strong class="text-dark">أ.</strong> {{ question.option_a }}
+                                        </div>
+                                        {% endif %}
+                                        {% if question.option_b %}
+                                        <div class="option mb-1">
+                                            <strong class="text-dark">ب.</strong> {{ question.option_b }}
+                                        </div>
+                                        {% endif %}
+                                        {% if question.option_c %}
+                                        <div class="option mb-1">
+                                            <strong class="text-dark">ج.</strong> {{ question.option_c }}
+                                        </div>
+                                        {% endif %}
+                                        {% if question.option_d %}
+                                        <div class="option mb-1">
+                                            <strong class="text-dark">د.</strong> {{ question.option_d }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Correct Answer Column -->
+                                <div class="col-md-6">
+                                    <h6 class="answer-title text-success mb-3">
+                                        <i class="fas fa-check-circle"></i>
+                                        الإجابة الصحيحة
+                                    </h6>
+
+                                    <div class="correct-answer p-3 border border-success rounded mb-3">
+                                        {% if question.question_type == 'mcq' or question.question_type == 'true_false' %}
+                                            <div class="text-success font-weight-bold">
+                                                <i class="fas fa-arrow-right"></i>
+                                                {{ question.correct_answer }}
+                                            </div>
+                                            {% if question.question_type == 'mcq' %}
+                                                <div class="mt-2 text-dark">
+                                                    {% if question.correct_answer == 'A' %}{{ question.option_a }}
+                                                    {% elif question.correct_answer == 'B' %}{{ question.option_b }}
+                                                    {% elif question.correct_answer == 'C' %}{{ question.option_c }}
+                                                    {% elif question.correct_answer == 'D' %}{{ question.option_d }}
+                                                    {% endif %}
+                                                </div>
+                                            {% endif %}
+                                        {% elif question.question_type == 'qa' %}
+                                            <div class="text-success">{{ question.answer|default:"إجابة نموذجية غير متوفرة" }}</div>
+                                        {% endif %}
+                                    </div>
+
+                                    <!-- Evaluation Score -->
+                                    <div class="score-section">
+                                        <label class="text-dark font-weight-bold mb-2">تقييم الإجابة (من 10 درجات):</label>
+                                        <div class="score-buttons">
+                                            {% for i in "0123456789"|make_list %}
+                                            <button type="button"
+                                                    class="btn btn-outline-primary score-btn me-1 mb-1"
+                                                    data-question="{{ question.id }}"
+                                                    data-score="{{ forloop.counter0 }}">
+                                                {{ forloop.counter0 }}
+                                            </button>
+                                            {% endfor %}
+                                            <button type="button"
+                                                    class="btn btn-outline-primary score-btn me-1 mb-1"
+                                                    data-question="{{ question.id }}"
+                                                    data-score="10">
+                                                10
+                                            </button>
+                                        </div>
+                                        <input type="hidden"
+                                               name="question_{{ question.id }}_score"
+                                               id="score_{{ question.id }}"
+                                               value="{{ existing_answers|get_score:question.id }}">
+
+                                        <!-- Notes -->
+                                        <div class="mt-3">
+                                            <label class="text-dark">ملاحظات على الإجابة:</label>
+                                            <textarea name="question_{{ question.id }}_notes"
+                                                      class="form-control"
+                                                      rows="2"
+                                                      placeholder="ملاحظات إضافية...">{{ existing_answers|get_notes:question.id }}</textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-exclamation-triangle fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">لا توجد أسئلة متاحة للتقييم</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Overall Evaluation -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-star text-warning"></i>
+                            التقييم الشامل
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label class="text-dark font-weight-bold">التوصية النهائية:</label>
+                                {{ form.recommendation }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="text-dark font-weight-bold">الدرجة الإجمالية:</label>
+                                <input type="number"
+                                       name="total_score"
+                                       id="total_score"
+                                       class="form-control"
+                                       min="0"
+                                       max="100"
+                                       value="{{ evaluation.total_score|default:'0' }}"
+                                       readonly>
+                            </div>
+                        </div>
+
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <label class="text-dark font-weight-bold">ملاحظات عامة:</label>
+                                {{ form.general_notes }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="row mt-4 mb-4">
+            <div class="col-12 text-center">
+                <button type="submit" class="btn btn-success btn-lg px-5">
+                    <i class="fas fa-save"></i>
+                    حفظ التقييم
+                </button>
+                <a href="{% url 'evaluation:committee_current_candidate' %}" class="btn btn-secondary btn-lg px-5 ml-3">
+                    <i class="fas fa-times"></i>
+                    إلغاء
+                </a>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle score button clicks
+    document.querySelectorAll('.score-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            const questionId = this.dataset.question;
+            const score = this.dataset.score;
+
+            // Remove active class from all buttons for this question
+            document.querySelectorAll(`[data-question="${questionId}"]`).forEach(function(b) {
+                b.classList.remove('btn-primary');
+                b.classList.add('btn-outline-primary');
+            });
+
+            // Add active class to clicked button
+            this.classList.remove('btn-outline-primary');
+            this.classList.add('btn-primary');
+
+            // Set the hidden input value
+            document.getElementById(`score_${questionId}`).value = score;
+
+            // Update total score
+            updateTotalScore();
+        });
+    });
+
+    // Initialize existing scores
+    initializeExistingScores();
+
+    // Calculate initial total
+    updateTotalScore();
+});
+
+function initializeExistingScores() {
+    document.querySelectorAll('input[id^="score_"]').forEach(function(input) {
+        const score = input.value;
+        const questionId = input.id.replace('score_', '');
+
+        if (score) {
+            const btn = document.querySelector(`[data-question="${questionId}"][data-score="${score}"]`);
+            if (btn) {
+                btn.classList.remove('btn-outline-primary');
+                btn.classList.add('btn-primary');
+            }
+        }
+    });
+}
+
+function updateTotalScore() {
+    let total = 0;
+    let maxTotal = {{ questions|length|default:0 }} * 10;
+
+    document.querySelectorAll('input[id^="score_"]').forEach(function(input) {
+        total += parseInt(input.value) || 0;
+    });
+
+    document.getElementById('total_score').value = total;
+
+    // Update progress indication
+    const percentage = maxTotal > 0 ? Math.round((total / maxTotal) * 100) : 0;
+    document.getElementById('total_score').style.backgroundColor =
+        percentage >= 80 ? '#d4edda' :
+        percentage >= 60 ? '#fff3cd' : '#f8d7da';
+}
+</script>
+
+<style>
+.question-block {
+    transition: all 0.3s ease;
+}
+
+.question-block:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.question-text {
+    font-size: 1.1em;
+    line-height: 1.6;
+}
+
+.correct-answer {
+    background-color: #f8fff9;
+    font-size: 1.05em;
+    line-height: 1.5;
+}
+
+.option {
+    padding: 8px 12px;
+    margin: 4px 0;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    color: #333 !important;
+}
+
+.score-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    font-weight: bold;
+    transition: all 0.2s ease;
+}
+
+.score-btn:hover {
+    transform: scale(1.1);
+}
+
+.score-btn.btn-primary {
+    background-color: #007bff;
+    border-color: #007bff;
+    color: white;
+}
+
+.alert-info {
+    background-color: #e7f3ff;
+    border-color: #b8daff;
+    color: #004085;
+}
+
+.text-dark {
+    color: #333 !important;
+}
+
+.question-title {
+    border-bottom: 2px solid #007bff;
+    padding-bottom: 8px;
+}
+
+.answer-title {
+    border-bottom: 2px solid #28a745;
+    padding-bottom: 8px;
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.bg-light {
+    background-color: #f8f9fa !important;
+}
+
+label {
+    color: #333 !important;
+    font-weight: 600;
+}
+
+.form-control {
+    border: 1px solid #ced4da;
+    color: #333;
+}
+
+.form-control:focus {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+}
+
+.btn-success {
+    background-color: #28a745;
+    border-color: #28a745;
+}
+
+.btn-success:hover {
+    background-color: #218838;
+    border-color: #1e7e34;
+}
+</style>
+{% endblock %}

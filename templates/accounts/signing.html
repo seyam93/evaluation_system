@@ -1,0 +1,130 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sign In</title>
+  <!-- <link rel="stylesheet" href="signin.css"/> -->
+  <style>
+    body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    background-color: #f2f2f2;
+    color: #333;
+  }
+  
+  .top-bar {
+
+  display: flex;
+  align-items: center;      /* يخلي الصورة والعنوان في نفس المستوى عموديًا */
+  justify-content: center;  /* يخليهم في النص أفقيًا */
+  gap: 20px;                /* مسافة بين الصورة والعنوان */
+  padding: 20px;
+  color: white;
+  background-color: #04463b;
+
+  }
+  
+  .logo {
+    height: 40px;
+    margin-right: 15px;
+  }
+  
+  .top-bar h1 {
+    margin: 0;
+    font-size: 40px;
+  }
+  
+  .navbar {
+    background-color: #0066cc;
+    overflow: hidden;
+  }
+  
+  .navbar a {
+    float: left;
+    display: block;
+    color: white;
+    padding: 12px 20px;
+    text-decoration: none;
+  }
+  
+  .navbar a:hover {
+    background-color: #004080;
+  }
+  
+  .container {
+    max-width: 400px;
+    margin: 40px auto;
+    background-color: white;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  }
+  
+  input[type="text"],
+  input[type="password"] {
+    width: 100%;
+    padding: 10px;
+    margin-top: 5px;
+    margin-bottom: 20px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+  }
+  
+  button {
+    width: 100%;
+    padding: 12px;
+    background-color: #0066cc;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  
+  button:hover {
+    background-color: #004080;
+  }
+  
+  .checkbox-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  
+  </style>
+</head>
+<body>
+  <!-- Top Bar -->
+  <div class="top-bar">
+    <!-- <img src="{% static 'images/logo.png' %}" alt="Clinic Logo" class="logo" /> -->
+    <h1>المنظومة الألية لأختبارات فرع المعلومات</h1>
+  </div>
+
+
+<div class="container">
+    <h2>تسجيل الدخول</h2>
+  
+    {% if messages %}
+      <div style="color: red; margin-bottom: 15px;">
+        {% for message in messages %}
+          <p>{{ message }}</p>
+        {% endfor %}
+      </div>
+    {% endif %}
+  
+    <form method="POST" id="loginForm" >
+      {% csrf_token %}
+      <label for="loginEmail">اسم المستخدم</label>
+      <input type="text" id="loginEmail" name="username" required />
+  
+      <label for="loginPassword">كلمة المرور</label>
+      <input type="password" id="Pass" name="password" required />
+  
+      <button type="submit">تسجيل الدخول</button>
+    </form>
+</div>
+    
+     
+

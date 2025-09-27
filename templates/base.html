@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{% endblock %}</title>
+    {% load static %}
+    <!-- Bootstrap CSS -->
+    <link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f2f2f2;
+            direction: rtl;
+            text-align: right;
+        }
+
+        .top-bar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            padding: 20px;
+            color: white;
+            background-color: #04463b;
+        }
+
+        .logo {
+            height: 50px;
+            width: auto;
+            margin-left: 20px;
+            object-fit: contain;
+            filter: brightness(1.1);
+        }
+
+        .top-bar h1 {
+            margin: 0;
+            font-size: 40px;
+            color: white;
+        }
+
+        .navbar {
+            background-color: #0066cc;
+            overflow: visible;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .navbar-right {
+            display: flex;
+            align-items: center;
+        }
+
+        .navbar-logo {
+            height: 32px;
+            width: auto;
+            margin-left: 15px;
+            object-fit: contain;
+            filter: brightness(1.2);
+        }
+
+        .navbar-left {
+            display: flex;
+            align-items: center;
+        }
+
+        .navbar a {
+            display: block;
+            color: white;
+            padding: 12px 20px;
+            text-decoration: none;
+            font-size: 16px;
+            font-weight: 500;
+            transition: background-color 0.3s ease;
+        }
+
+        .navbar a:hover {
+            background-color: #004080;
+            text-decoration: none;
+        }
+
+        .user-dropdown {
+            position: relative;
+        }
+
+        .user-dropdown-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: white;
+            padding: 12px 16px;
+            text-decoration: none;
+            font-size: 16px;
+            font-weight: 500;
+            transition: background-color 0.3s ease;
+            cursor: pointer;
+        }
+
+        .user-dropdown-btn:hover {
+            background-color: #004080;
+            color: white;
+            text-decoration: none;
+        }
+
+        .user-dropdown-btn i.fa-chevron-down {
+            font-size: 12px;
+            transition: transform 0.3s ease;
+        }
+
+        .user-dropdown .dropdown-content {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 100%;
+            background: white;
+            min-width: 180px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+            border-radius: 4px;
+            z-index: 1000;
+            margin-top: 5px;
+            border: 1px solid #ddd;
+        }
+
+        .dropdown-logout {
+            color: #000 !important;
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background-color 0.3s ease;
+        }
+
+        .dropdown-logout:hover {
+            background-color: #f8f9fa;
+            color: #000;
+            text-decoration: none;
+        }
+
+        .dropdown-logout i {
+            margin-left: 8px;
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Top Bar -->
+    <div class="top-bar">
+        <img src="{% static 'images/logo.png' %}" alt="Logo" class="logo">
+        <h1>المنظومة الآلية للإختبارات الدورية</h1>
+    </div>
+
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="navbar-right">
+            <img src="{% static 'images/logo.png' %}" alt="Logo" class="navbar-logo">
+            {% if user.is_authenticated and user.profile.user_type == 'committee' %}
+                <a href="{% url 'accounts:committee_dashboard' %}">الصفحة الرئيسية</a>
+            {% else %}
+                <a href="{% url 'core:home' %}">الصفحة الرئيسية</a>
+            {% endif %}
+            {% if user.is_authenticated %}
+                {% if user.profile.user_type == 'examiner' %}
+                    <!-- Examiner Navigation -->
+                    <a href="{% url 'evaluation:examiner_dashboard' %}">لوحة التحكم</a>
+                    <a href="{% url 'evaluation:plan_selection' %}">إنشاء جلسة تقييم</a>
+                    <a href="{% url 'evaluation:session_list' %}">جلسات التقييم</a>
+                    <a href="{% url 'evaluation:question_list' %}">بنك الأسئلة</a>
+                    <a href="{% url 'students:candidate_list' %}">المرشحين</a>
+                    <a href="{% url 'students:plan_list' %}">الخطط</a>
+                {% elif user.profile.user_type == 'committee' %}
+                    <!-- Committee Navigation -->
+                    <a href="{% url 'evaluation:committee_dashboard' %}">لوحة التحكم</a>
+                    <a href="{% url 'evaluation:committee_current_candidate' %}">التقييم الحالي</a>
+                {% elif user.profile.user_type == 'admin' %}
+                    <!-- Admin Navigation -->
+                    <a href="{% url 'accounts:admin_dashboard' %}">لوحة التحكم</a>
+                    <a href="{% url 'evaluation:examiner_dashboard' %}">إدارة التقييم</a>
+                    <a href="{% url 'students:candidate_create' %}">إضافة ممتحن</a>
+                    <a href="{% url 'students:plan_create' %}">إضافة خطة</a>
+                    <a href="{% url 'students:candidate_list' %}">المرشحين</a>
+                    <a href="{% url 'students:plan_list' %}">الخطط</a>
+                {% else %}
+                    <!-- Default Navigation for other users -->
+                    <a href="{% url 'students:candidate_create' %}">إضافة ممتحن</a>
+                    <a href="{% url 'students:plan_create' %}">إضافة خطة</a>
+                    <a href="{% url 'students:candidate_list' %}">المرشحين</a>
+                    <a href="{% url 'students:plan_list' %}">الخطط</a>
+                {% endif %}
+            {% endif %}
+        </div>
+
+        <div class="navbar-left">
+            {% if user.is_authenticated %}
+                <div class="user-dropdown" id="userDropdown">
+                    <a href="#" class="user-dropdown-btn" onclick="toggleDropdown(event)">
+                        <i class="fas fa-user-circle"></i>
+                        {{ user.get_full_name|default:user.username }}
+                        <i class="fas fa-chevron-down" id="dropdownArrow"></i>
+                    </a>
+                    <div class="dropdown-content" id="dropdownMenu">
+                        <a href="{% url 'accounts:logout' %}" class="dropdown-logout">
+                            <i class="fas fa-sign-out-alt"></i> تسجيل الخروج
+                        </a>
+                    </div>
+                </div>
+            {% else %}
+                <a href="{% url 'accounts:signing' %}">تسجيل الدخول</a>
+            {% endif %}
+        </div>
+    </nav>
+
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="bg-light text-center py-3 mt-5">
+        <div class="container">
+            <p class="mb-0">&copy; 2025 MyProject. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JavaScript -->
+    <script src="{% static 'libs/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+
+    <script>
+        function toggleDropdown(event) {
+            event.preventDefault();
+            const dropdown = document.getElementById('dropdownMenu');
+            const arrow = document.getElementById('dropdownArrow');
+
+            if (dropdown.style.display === 'block') {
+                dropdown.style.display = 'none';
+                arrow.style.transform = 'rotate(0deg)';
+            } else {
+                dropdown.style.display = 'block';
+                arrow.style.transform = 'rotate(180deg)';
+            }
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            const dropdown = document.getElementById('userDropdown');
+            const menu = document.getElementById('dropdownMenu');
+            const arrow = document.getElementById('dropdownArrow');
+
+            if (dropdown && !dropdown.contains(event.target)) {
+                menu.style.display = 'none';
+                arrow.style.transform = 'rotate(0deg)';
+            }
+        });
+    </script>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

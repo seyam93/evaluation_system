@@ -1,0 +1,1726 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    {% if no_active_session %}
+        <!-- No Active Session -->
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card text-center">
+                    <div class="card-body py-5">
+                        <i class="fas fa-pause-circle fa-5x text-muted mb-4"></i>
+                        <h3 class="text-muted mb-3">{{ message }}</h3>
+                        <p class="text-muted mb-4">
+                            يرجى انتظار بدء جلسة تقييم من قبل المشرف، أو العودة إلى لوحة التحكم
+                        </p>
+                        <a href="{% url 'evaluation:committee_dashboard' %}" class="btn btn-primary">
+                            <i class="fas fa-arrow-right"></i> العودة للوحة التحكم
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h2 class="text-primary">{{ title }}</h2>
+                    <div>
+                        <a href="{% url 'evaluation:committee_dashboard' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-right"></i> العودة للوحة التحكم
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Two Column Layout -->
+        <div class="row">
+            <!-- Left Column: Evaluation Section -->
+            <div class="col-lg-6 mb-4">
+                <div class="evaluation-section">
+
+                    <!-- Current Candidate -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="fas fa-user text-primary"></i>
+                                المرشح الحالي للتقييم
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            {% if candidate %}
+                                <div class="candidate-simple-card">
+                                    <div class="candidate-simple-info">
+                                        <div class="candidate-photo-container">
+                                            <img src="{{ candidate.get_profile_image_url }}"
+                                                 alt="صورة المرشح"
+                                                 class="candidate-photo-simple">
+                                        </div>
+                                        <div class="candidate-name-container">
+                                            <h4 class="candidate-name-simple">{{ candidate.student_name }}</h4>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Current Question Display -->
+                                <div class="current-question-section mt-4">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h6 class="mb-0">
+                                                <i class="fas fa-question-circle text-success"></i>
+                                                السؤال الحالي
+                                            </h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div id="currentQuestionContainer">
+                                                <div class="text-center py-3">
+                                                    <i class="fas fa-hourglass-half text-muted"></i>
+                                                    <p class="text-muted mb-0">لم يتم اختيار سؤال بعد</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Previous Tests Results -->
+                                {% if candidate.previous_tests.exists %}
+                                    <div class="mt-3">
+                                        <h6 class="text-muted mb-2">نتائج الاختبارات السابقة:</h6>
+                                        <div class="row">
+                                            {% for test in candidate.previous_tests.all %}
+                                                <div class="col-6 mb-2">
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <span class="text-muted">{{ test.category.name_arabic }}:</span>
+                                                        <div class="circle-progress-small" data-percentage="{{ test.percentage }}">
+                                                            <span class="percentage-text">{{ test.percentage|floatformat:0 }}%</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                {% endif %}
+
+                            {% else %}
+                                <div class="text-center py-4">
+                                    <i class="fas fa-user-times fa-2x text-muted mb-3"></i>
+                                    <p class="text-muted mb-0">لم يتم اختيار مرشح للتقييم بعد</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Evaluation Criteria Section -->
+            <div class="col-lg-6 mb-4">
+                <div class="evaluation-criteria-section">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="fas fa-star text-warning"></i>
+                                معايير التقييم
+                            </h5>
+                        </div>
+                        <div class="card-body" style="max-height: 600px; overflow-y: auto;">
+                            <div id="evaluationTopicsContainer">
+                                <!-- Evaluation topics will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Save Evaluation Button Section (Fixed Outside Container) -->
+{% if session and candidate %}
+<div class="container-fluid mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="save-evaluation-section">
+                <div class="card border-success">
+                    <div class="card-body text-center py-3">
+                        <button type="button" class="btn btn-success btn-lg px-5" onclick="saveCompleteEvaluation()" id="saveEvaluationBtn">
+                            <i class="fas fa-save me-2"></i>
+                            حفظ التقييم النهائي
+                        </button>
+                        <div id="saveStatus" class="mt-3" style="display: none;"></div>
+                        <div class="mt-2">
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle me-1"></i>
+                                يجب إكمال تقييم جميع المحاور قبل الحفظ
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Hidden CSRF Token for AJAX -->
+{% csrf_token %}
+
+<!-- Auto-refresh Script -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-refresh every 10 seconds to check for new candidate (without page reload)
+    setInterval(function() {
+        // Only refresh if no evaluation is in progress
+        if (!document.querySelector('.alert-warning')) {
+            updateCandidateInfo();
+        }
+    }, 10000);
+
+    // Initialize circle progress indicators
+    initCircleProgress();
+
+    // Load evaluation topics
+    loadEvaluationTopics();
+
+    // Load current question and set up auto-refresh
+    loadCurrentQuestion();
+    setInterval(loadCurrentQuestion, 3000);
+});
+
+function initCircleProgress() {
+    document.querySelectorAll('.circle-progress-small').forEach(function(element) {
+        const percentage = parseInt(element.dataset.percentage);
+        const color = percentage >= 85 ? '#28a745' : percentage >= 70 ? '#ffc107' : '#dc3545';
+
+        element.style.background = `conic-gradient(${color} ${percentage * 3.6}deg, #e9ecef 0deg)`;
+        element.style.width = '40px';
+        element.style.height = '40px';
+        element.style.borderRadius = '50%';
+        element.style.display = 'flex';
+        element.style.alignItems = 'center';
+        element.style.justifyContent = 'center';
+        element.style.fontSize = '11px';
+        element.style.fontWeight = 'bold';
+        element.style.color = '#fff';
+        element.style.textShadow = '0 0 3px rgba(0,0,0,0.5)';
+    });
+}
+
+function loadEvaluationTopics() {
+    console.log('Loading evaluation topics...');
+    // Load all active evaluation topics with criteria
+    fetch('/evaluation/ajax/get-evaluation-topics/', {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Evaluation topics response:', data);
+        if (data.success && data.topics) {
+            const container = document.getElementById('evaluationTopicsContainer');
+            let html = '';
+
+            data.topics.forEach(topic => {
+                html += `
+                    <div class="evaluation-topic-card mb-4">
+                        <div class="topic-header">
+                            <h6 class="topic-name">${topic.name}</h6>
+                        </div>
+                        <div class="topic-description">
+                            ${topic.description || ''}
+                        </div>
+                        <div class="criteria-grid mt-3">
+                `;
+
+                topic.criteria.forEach(criteria => {
+                    html += `
+                        <div class="criteria-item clickable-criteria"
+                             data-topic-id="${topic.id}"
+                             data-criteria-id="${criteria.id}"
+                             data-criteria-name="${criteria.name}">
+                            <div class="criteria-badge" style="background-color: ${criteria.color};">
+                                ${criteria.name}
+                            </div>
+                            <div class="criteria-description">
+                                ${criteria.description || ''}
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += `
+                        </div>
+                        <div class="topic-evaluation-status mt-2" id="topicStatus${topic.id}">
+                            <div class="text-center text-muted small">
+                                لم يتم التقييم بعد
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            if (html === '') {
+                html = `
+                    <div class="text-center py-4">
+                        <i class="fas fa-exclamation-circle fa-2x text-muted mb-3"></i>
+                        <p class="text-muted mb-0">لا توجد معايير تقييم متاحة</p>
+                    </div>
+                `;
+            } else {
+                // Add evaluation summary section
+                html += `
+                    <div class="evaluation-summary-section mt-4">
+                        <div class="card bg-light">
+                            <div class="card-header">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-calculator text-info"></i>
+                                    ملخص التقييم
+                                </h6>
+                            </div>
+                            <div class="card-body" id="evaluationSummary">
+                                <div class="text-center text-muted">
+                                    لا توجد تقييمات بعد
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card simple-results-card mt-3">
+                            <div class="card-header simple-results-header">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-chart-pie text-info"></i>
+                                    النتيجة الإجمالية
+                                </h6>
+                            </div>
+                            <div class="card-body" id="overallSummary">
+                                <div class="text-center text-muted">
+                                    <i class="fas fa-hourglass-half mb-2"></i>
+                                    <p class="mb-0">جاري التحميل...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = html;
+
+            // Load existing evaluations
+            loadExistingEvaluations();
+
+            // Load overall summary
+            loadOverallSummary();
+
+            // Add event delegation for criteria selection
+            setupCriteriaEventHandlers();
+        }
+    })
+    .catch(error => {
+        console.error('Error loading evaluation topics:', error);
+        document.getElementById('evaluationTopicsContainer').innerHTML = `
+            <div class="text-center py-4">
+                <i class="fas fa-exclamation-triangle fa-2x text-danger mb-3"></i>
+                <p class="text-muted mb-0">خطأ في تحميل معايير التقييم</p>
+            </div>
+        `;
+    });
+}
+
+// Store user evaluations
+let userEvaluations = {};
+
+function selectCriteria(topicId, criteriaId, criteriaName, element) {
+    console.log('Selecting criteria:', topicId, criteriaId, criteriaName);
+
+    // Ensure we have a candidate selected
+    const candidateName = document.querySelector('.candidate-name-simple')?.textContent;
+    if (!candidateName) {
+        alert('يجب اختيار مرشح أولاً');
+        return;
+    }
+
+    // Remove previous selection from this topic
+    const topicItems = document.querySelectorAll(`[data-topic-id="${topicId}"]`);
+    topicItems.forEach(item => {
+        item.classList.remove('selected-criteria');
+    });
+
+    // Add selection to clicked item
+    element.classList.add('selected-criteria');
+
+    // Store the evaluation
+    userEvaluations[topicId] = {
+        criteriaId: criteriaId,
+        criteriaName: criteriaName,
+        timestamp: new Date().toISOString()
+    };
+
+    // Update topic status
+    const statusElement = document.getElementById(`topicStatus${topicId}`);
+    if (statusElement) {
+        statusElement.innerHTML = `
+            <div class="text-center text-success small">
+                <i class="fas fa-check-circle"></i>
+                تم اختيار: ${criteriaName}
+            </div>
+        `;
+    }
+
+    // Update evaluation summary
+    updateEvaluationSummary();
+
+    // Save to backend
+    saveEvaluation(topicId, criteriaId);
+
+    // Update overall summary after saving
+    console.log('Scheduling overall summary update...');
+    setTimeout(() => {
+        console.log('Running scheduled overall summary update');
+        loadOverallSummary();
+    }, 500);
+}
+
+function loadExistingEvaluations() {
+    // Load existing evaluations for current candidate and current user
+    const candidateElement = document.querySelector('.candidate-name-simple');
+    if (!candidateElement) return;
+
+    fetch('/evaluation/ajax/load-user-evaluations/', {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.evaluations) {
+            userEvaluations = {};
+
+            data.evaluations.forEach(evaluation => {
+                const topicId = evaluation.topic_id;
+                const criteriaId = evaluation.criteria_id;
+                const criteriaName = evaluation.criteria_name;
+
+                // Store in local object
+                userEvaluations[topicId] = {
+                    criteriaId: criteriaId,
+                    criteriaName: criteriaName,
+                    timestamp: evaluation.created_at
+                };
+
+                // Update UI
+                const criteriaElement = document.querySelector(`[data-topic-id="${topicId}"][data-criteria-id="${criteriaId}"]`);
+                if (criteriaElement) {
+                    criteriaElement.classList.add('selected-criteria');
+                }
+
+                // Update topic status
+                const statusElement = document.getElementById(`topicStatus${topicId}`);
+                if (statusElement) {
+                    statusElement.innerHTML = `
+                        <div class="text-center text-success small">
+                            <i class="fas fa-check-circle"></i>
+                            تم اختيار: ${criteriaName}
+                        </div>
+                    `;
+                }
+            });
+
+            updateEvaluationSummary();
+        }
+    })
+    .catch(error => {
+        console.error('Error loading existing evaluations:', error);
+    });
+}
+
+function saveEvaluation(topicId, criteriaId) {
+    const candidateElement = document.querySelector('.candidate-name-simple');
+    if (!candidateElement) return;
+
+    console.log('Saving evaluation:', topicId, criteriaId);
+
+    fetch('/evaluation/ajax/save-evaluation/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+        body: JSON.stringify({
+            topic_id: topicId,
+            criteria_id: criteriaId
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Save evaluation response:', data);
+        if (!data.success) {
+            console.error('Failed to save evaluation:', data.error);
+            alert('حدث خطأ في حفظ التقييم: ' + (data.error || 'خطأ غير معروف'));
+        } else {
+            console.log('Evaluation saved successfully');
+        }
+    })
+    .catch(error => {
+        console.error('Error saving evaluation:', error);
+        alert('حدث خطأ في الاتصال أثناء حفظ التقييم');
+    });
+}
+
+function updateEvaluationSummary() {
+    const summaryElement = document.getElementById('evaluationSummary');
+    if (!summaryElement) return;
+
+    const evaluationCount = Object.keys(userEvaluations).length;
+
+    if (evaluationCount === 0) {
+        summaryElement.innerHTML = `
+            <div class="text-center text-muted">
+                لا توجد تقييمات بعد
+            </div>
+        `;
+        return;
+    }
+
+    let html = `
+        <div class="evaluation-summary-stats">
+            <div class="row text-center">
+                <div class="col-4">
+                    <div class="summary-stat">
+                        <div class="stat-number text-primary">${evaluationCount}</div>
+                        <div class="stat-label">تم تقييمها</div>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="summary-stat">
+                        <div class="stat-number text-info">${document.querySelectorAll('.evaluation-topic-card').length}</div>
+                        <div class="stat-label">إجمالي المعايير</div>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="summary-stat">
+                        <div class="stat-number text-success">${Math.round((evaluationCount / document.querySelectorAll('.evaluation-topic-card').length) * 100)}%</div>
+                        <div class="stat-label">التقييمات المكتملة</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="evaluation-details mt-3">
+            <h6 class="text-muted mb-2">تفاصيل التقييم:</h6>
+    `;
+
+    Object.keys(userEvaluations).forEach(topicId => {
+        const evaluation = userEvaluations[topicId];
+        const topicElement = document.querySelector(`[data-topic-id="${topicId}"]`);
+        const topicName = topicElement?.closest('.evaluation-topic-card').querySelector('.topic-name')?.textContent || `معيار ${topicId}`;
+
+        html += `
+            <div class="evaluation-detail-item">
+                <span class="topic-name-small">${topicName}:</span>
+                <span class="criteria-name-small text-primary">${evaluation.criteriaName}</span>
+            </div>
+        `;
+    });
+
+    html += `</div>`;
+
+    summaryElement.innerHTML = html;
+}
+
+function loadOverallSummary() {
+    console.log('Loading overall summary...');
+    const summaryElement = document.getElementById('overallSummary');
+    if (!summaryElement) {
+        console.log('No overallSummary element found');
+        return;
+    }
+
+    const candidateElement = document.querySelector('.candidate-name-simple');
+    if (!candidateElement) {
+        console.log('No candidate selected');
+        summaryElement.innerHTML = `
+            <div class="text-center">
+                <i class="fas fa-user-times"></i>
+                <p class="mb-0">لا يوجد مرشح حالي</p>
+            </div>
+        `;
+        return;
+    }
+
+    console.log('Fetching evaluation summary from API...');
+    fetch('/evaluation/ajax/get-evaluation-summary/', {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Overall summary response:', data);
+        if (data.success) {
+            const stats = data.overall_stats;
+            const topicTotals = data.topic_totals;
+            const evaluatorTotals = data.evaluator_totals;
+
+            console.log('Stats:', stats);
+            console.log('Topic totals:', topicTotals);
+            console.log('Evaluator totals:', evaluatorTotals);
+
+            // Create simple and clean summary
+            const percentage = Math.round(stats.overall_percentage);
+            const gradeColor = percentage >= 85 ? 'success' : percentage >= 70 ? 'warning' : percentage >= 50 ? 'info' : 'danger';
+            const gradeText = percentage >= 85 ? 'ممتاز' : percentage >= 70 ? 'جيد جداً' : percentage >= 50 ? 'جيد' : 'ضعيف';
+
+            console.log('Calculated values:', { percentage, gradeColor, gradeText });
+            console.log('Evaluator count:', Object.keys(evaluatorTotals).length);
+            console.log('Topics completed:', Object.keys(topicTotals).length, '/', stats.total_topics);
+
+            let html = `
+                <div class="simple-score-display">
+                    <div class="main-score-card">
+                        <div class="score-percentage">
+                            <span class="percentage-number">${percentage}%</span>
+                            <span class="grade-badge badge bg-${gradeColor}">${gradeText}</span>
+                        </div>
+                        <div class="small text-muted mt-1">النتيجة الإجمالية المرجحة</div>
+                    </div>
+                </div>
+
+                <div class="simple-stats-row">
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="stat-item">
+                                <div class="stat-value">${Object.keys(evaluatorTotals).length}</div>
+                                <div class="stat-text">مقيم شارك</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="stat-item">
+                                <div class="stat-value">${Object.keys(topicTotals).length}/${stats.total_topics}</div>
+                                <div class="stat-text">محور مكتمل</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add simple topic breakdown if available
+            if (Object.keys(topicTotals).length > 0) {
+                html += `
+                    <div class="simple-topics-section">
+                        <h6 class="topics-title">
+                            <i class="fas fa-list text-muted"></i>
+                            تفصيل المحاور
+                        </h6>
+                        <div class="topics-list">
+                `;
+
+                Object.values(topicTotals).forEach(topic => {
+                    const percentage = Math.round(topic.average_score || 0);
+                    const statusClass = percentage >= 85 ? 'success' : percentage >= 70 ? 'warning' : percentage >= 50 ? 'info' : 'danger';
+
+                    html += `
+                        <div class="topic-item">
+                            <div class="topic-info">
+                                <span class="topic-title">${topic.topic_name}</span>
+                                <small class="topic-detail">${topic.evaluator_count} مقيم</small>
+                            </div>
+                            <div class="topic-result">
+                                <span class="badge bg-${statusClass}">${percentage}%</span>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += `
+                        </div>
+                    </div>
+                `;
+            }
+
+
+            summaryElement.innerHTML = html;
+        } else {
+            summaryElement.innerHTML = `
+                <div class="text-center">
+                    <i class="fas fa-chart-bar"></i>
+                    <p class="mb-0">لا توجد تقييمات إجمالية بعد</p>
+                </div>
+            `;
+        }
+    })
+    .catch(error => {
+        console.error('Error loading overall summary:', error);
+        summaryElement.innerHTML = `
+            <div class="text-center">
+                <i class="fas fa-exclamation-triangle"></i>
+                <p class="mb-0">خطأ في تحميل الإجماليات</p>
+            </div>
+        `;
+    });
+}
+
+function setupCriteriaEventHandlers() {
+    // Remove any existing handlers first
+    const container = document.getElementById('evaluationTopicsContainer');
+    if (container) {
+        // Use event delegation to handle clicks on criteria items
+        container.addEventListener('click', function(e) {
+            const criteriaItem = e.target.closest('.clickable-criteria');
+            if (criteriaItem) {
+                const topicId = parseInt(criteriaItem.dataset.topicId);
+                const criteriaId = parseInt(criteriaItem.dataset.criteriaId);
+                const criteriaName = criteriaItem.dataset.criteriaName;
+
+                selectCriteria(topicId, criteriaId, criteriaName, criteriaItem);
+            }
+        });
+    }
+}
+
+function showQuestionWithAnswer(questionId, questionType) {
+    const container = document.getElementById('questionsContainer');
+
+    // Show loading
+    container.innerHTML = `
+        <div class="text-center py-4">
+            <i class="fas fa-spinner fa-spin fa-2x text-primary mb-3"></i>
+            <p class="text-muted">جاري تحميل السؤال...</p>
+        </div>
+    `;
+
+    fetch(`/evaluation/ajax/qa-question/${questionId}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                let html = `
+                    <div class="question-display">
+                        <div class="question-section mb-4">
+                            <h6 class="text-primary mb-2">
+                                <i class="fas fa-question-circle"></i> السؤال:
+                            </h6>
+                            <div class="question-text p-3 bg-light border-left-primary">
+                                ${data.question}
+                            </div>
+                `;
+
+                if (questionType === 'mcq' && data.options) {
+                    html += `<div class="options-list mt-3">`;
+                    data.options.forEach((option, index) => {
+                        const label = String.fromCharCode(65 + index); // A, B, C, D
+                        const isCorrect = data.correct_answer === label;
+                        html += `
+                            <div class="option-item p-2 mb-2 border rounded ${isCorrect ? 'bg-success text-white' : 'bg-white'}">
+                                <strong>${label}.</strong> ${option}
+                                ${isCorrect ? '<i class="fas fa-check float-right"></i>' : ''}
+                            </div>
+                        `;
+                    });
+                    html += `</div>`;
+                } else if (questionType === 'true_false') {
+                    const correctAnswer = data.correct_answer === 'True' ? 'صحيح' : 'خطأ';
+                    html += `
+                        <div class="options-list mt-3">
+                            <div class="option-item p-2 mb-2 border rounded ${data.correct_answer === 'True' ? 'bg-success text-white' : 'bg-white'}">
+                                <strong>أ.</strong> صحيح
+                                ${data.correct_answer === 'True' ? '<i class="fas fa-check float-right"></i>' : ''}
+                            </div>
+                            <div class="option-item p-2 mb-2 border rounded ${data.correct_answer === 'False' ? 'bg-success text-white' : 'bg-white'}">
+                                <strong>ب.</strong> خطأ
+                                ${data.correct_answer === 'False' ? '<i class="fas fa-check float-right"></i>' : ''}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                html += `</div>`;
+
+                if (data.answer) {
+                    html += `
+                        <div class="answer-section">
+                            <h6 class="text-success mb-2">
+                                <i class="fas fa-lightbulb"></i> الإجابة النموذجية:
+                            </h6>
+                            <div class="answer-text p-3 bg-light border-left-success">
+                                ${data.answer}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                html += `</div>`;
+                container.innerHTML = html;
+
+                // Highlight selected question
+                document.querySelectorAll('.question-btn').forEach(btn => {
+                    btn.classList.remove('btn-primary');
+                    btn.classList.add('btn-outline-primary');
+                });
+                event.target.classList.remove('btn-outline-primary');
+                event.target.classList.add('btn-primary');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            container.innerHTML = `
+                <div class="text-center py-4">
+                    <i class="fas fa-exclamation-triangle fa-2x text-danger mb-3"></i>
+                    <p class="text-muted">حدث خطأ في تحميل السؤال</p>
+                </div>
+            `;
+        });
+}
+
+function getQuestionTypeName(type) {
+    switch(type) {
+        case 'mcq': return 'اختيار من متعدد';
+        case 'true_false': return 'صح أم خطأ';
+        case 'qa': return 'سؤال وجواب';
+        default: return 'غير محدد';
+    }
+}
+
+function loadCurrentQuestion() {
+    fetch('/evaluation/ajax/get-current-question/', {
+        method: 'GET',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(response => response.json())
+    .then(data => {
+        const container = document.getElementById('currentQuestionContainer');
+
+        if (data.success) {
+            let html = `
+                <div class="current-question-display">
+                    <div class="question-type-badge mb-3">
+                        <span class="badge bg-primary">${getQuestionTypeName(data.question_type)}</span>
+                    </div>
+                    <div class="question-text-current">
+                        <h6 class="text-primary mb-2">السؤال:</h6>
+                        <div class="question-content">${data.question_text}</div>
+                    </div>
+            `;
+
+            // Add options for MCQ questions
+            if (data.question_type === 'mcq' && data.options) {
+                html += `
+                    <div class="mcq-options mt-3">
+                        <h6 class="text-primary mb-2">الخيارات:</h6>
+                        <div class="options-grid">
+                `;
+                data.options.forEach((option, index) => {
+                    const label = String.fromCharCode(65 + index); // A, B, C, D
+                    const isCorrect = data.correct_answer === label;
+                    html += `
+                        <div class="option-item ${isCorrect ? 'correct-option' : ''}">
+                            <span class="option-label">${label}.</span>
+                            <span class="option-text">${option}</span>
+                            ${isCorrect ? '<i class="fas fa-check text-success ms-2"></i>' : ''}
+                        </div>
+                    `;
+                });
+                html += `</div></div>`;
+            }
+
+            // Add correct answer for true_false questions
+            if (data.question_type === 'true_false' && data.correct_answer) {
+                html += `
+                    <div class="correct-answer-section mt-3">
+                        <h6 class="text-primary mb-2">الإجابة الصحيحة:</h6>
+                        <div class="true-false-answer ${data.correct_answer.toLowerCase()}">
+                            <span class="answer-badge">${data.correct_answer === 'True' ? 'صحيح ✓' : 'خطأ ✗'}</span>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Add answer explanation for qa and true_false questions
+            if (data.answer) {
+                html += `
+                    <div class="answer-section mt-3">
+                        <h6 class="text-success mb-2">الاجابة:</h6>
+                        <div class="answer-content">${data.answer}</div>
+                    </div>
+                `;
+            }
+
+            html += `</div>`;
+            container.innerHTML = html;
+        } else {
+            container.innerHTML = `
+                <div class="text-center py-3">
+                    <i class="fas fa-hourglass-half text-muted"></i>
+                    <p class="text-muted mb-0">لم يتم اختيار سؤال بعد</p>
+                </div>
+            `;
+        }
+    })
+    .catch(error => {
+        console.error('Error loading current question:', error);
+    });
+}
+
+function updateCandidateInfo() {
+    // Fetch updated candidate information without reloading the page
+    fetch(window.location.href, {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.text())
+    .then(html => {
+        const parser = new DOMParser();
+        const newDoc = parser.parseFromString(html, 'text/html');
+
+        // Update only the candidate section without affecting scroll position
+        const currentCandidateSection = document.querySelector('.candidate-simple-card');
+        const newCandidateSection = newDoc.querySelector('.candidate-simple-card');
+
+        if (currentCandidateSection && newCandidateSection) {
+            // Check if there's actually a change to avoid unnecessary updates
+            if (currentCandidateSection.innerHTML !== newCandidateSection.innerHTML) {
+                currentCandidateSection.innerHTML = newCandidateSection.innerHTML;
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error updating candidate info:', error);
+        // Fallback to page reload only if there's an error
+        // location.reload();
+    });
+}
+
+function startEvaluation() {
+    // Create evaluation record via AJAX and redirect to evaluation form
+    fetch('{% url "evaluation:create_evaluation" %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            'session_id': {{ session.id }},
+            'candidate_id': {{ candidate.id|default:0 }}
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.location.href = data.evaluation_url;
+        } else {
+            alert('حدث خطأ في بدء التقييم. يرجى المحاولة مرة أخرى.');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('حدث خطأ في الاتصال. يرجى المحاولة مرة أخرى.');
+    });
+}
+
+function saveCompleteEvaluation() {
+    console.log('Saving complete evaluation...');
+
+    const saveBtn = document.getElementById('saveEvaluationBtn');
+    const saveStatus = document.getElementById('saveStatus');
+
+    // Disable button and show loading
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>جارٍ الحفظ...';
+
+    fetch('/evaluation/ajax/save-complete-evaluation/', {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value || getCookie('csrftoken')
+        },
+        body: new URLSearchParams({
+            'general_notes': ''  // Could add a notes field later
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Save evaluation response:', data);
+
+        if (data.success) {
+            // Success message
+            saveStatus.innerHTML = `
+                <div class="alert alert-success alert-sm">
+                    <i class="fas fa-check-circle me-2"></i>
+                    ${data.message}
+                    <div class="mt-1">
+                        <small>
+                            النسبة النهائية: ${data.percentage}% (${data.grade})
+                            ${data.created ? '' : ' - تم التحديث'}
+                        </small>
+                    </div>
+                </div>
+            `;
+            saveStatus.style.display = 'block';
+
+            // Update button to show saved state
+            saveBtn.innerHTML = '<i class="fas fa-check me-2"></i>تم الحفظ بنجاح';
+            saveBtn.className = 'btn btn-outline-success btn-lg w-100';
+
+            // Redirect to committee dashboard after a delay
+            setTimeout(() => {
+                window.location.href = '/evaluation/committee/';
+            }, 2000);
+
+        } else {
+            // Error message
+            saveStatus.innerHTML = `
+                <div class="alert alert-danger alert-sm">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    ${data.error || 'حدث خطأ في حفظ التقييم'}
+                </div>
+            `;
+            saveStatus.style.display = 'block';
+
+            // Re-enable button
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fas fa-save me-2"></i>حفظ التقييم النهائي';
+        }
+    })
+    .catch(error => {
+        console.error('Error saving evaluation:', error);
+
+        saveStatus.innerHTML = `
+            <div class="alert alert-danger alert-sm">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                حدث خطأ في الاتصال. يرجى المحاولة مرة أخرى.
+            </div>
+        `;
+        saveStatus.style.display = 'block';
+
+        // Re-enable button
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = '<i class="fas fa-save me-2"></i>حفظ التقييم النهائي';
+    });
+}
+
+// Helper function to get CSRF token from cookies
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+
+<style>
+.candidate-photo {
+    border: 3px solid #dee2e6;
+    transition: all 0.3s ease;
+}
+
+.candidate-photo:hover {
+    border-color: #007bff;
+    transform: scale(1.05);
+}
+
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.font-weight-bold {
+    font-weight: 600 !important;
+}
+
+label.text-muted {
+    font-size: 0.875rem;
+    margin-bottom: 4px;
+    display: block;
+}
+
+.progress {
+    background-color: #e9ecef;
+}
+
+.badge {
+    font-size: 0.875em;
+    padding: 0.5em 0.75em;
+}
+
+.alert {
+    border: none;
+    border-radius: 8px;
+}
+
+.circle-progress-small .percentage-text {
+    font-size: 11px;
+    font-weight: bold;
+}
+
+.fa-5x {
+    font-size: 5em;
+}
+
+.fa-3x {
+    font-size: 3em;
+}
+
+/* Questions Section Styles */
+.question-btn {
+    transition: all 0.3s ease;
+}
+
+.question-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.border-left-primary {
+    border-left: 4px solid #007bff !important;
+}
+
+.border-left-success {
+    border-left: 4px solid #28a745 !important;
+}
+
+.question-text, .answer-text {
+    font-size: 1rem;
+    line-height: 1.6;
+    border-radius: 8px;
+}
+
+.option-item {
+    transition: all 0.2s ease;
+}
+
+.questions-section .card {
+    border: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+/* Simple Candidate Section Styles */
+.candidate-simple-card {
+    padding: 20px;
+}
+
+.candidate-simple-info {
+    display: flex;
+    align-items: center;
+    gap: 25px;
+    justify-content: center;
+}
+
+.candidate-photo-container {
+    flex-shrink: 0;
+}
+
+.candidate-photo-simple {
+    width: 100px;
+    height: 100px;
+    border-radius: 20px;
+    object-fit: cover;
+    border: 3px solid #007bff;
+    box-shadow: 0 4px 12px rgba(0,123,255,0.2);
+    transition: all 0.3s ease;
+}
+
+.candidate-photo-simple:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(0,123,255,0.3);
+}
+
+.candidate-name-container {
+    flex: 1;
+}
+
+.candidate-name-simple {
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #2c3e50;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    text-align: center;
+}
+
+/* Responsive Design for Simple Candidate Section */
+@media (max-width: 768px) {
+    .candidate-simple-info {
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .candidate-name-simple {
+        font-size: 1.5rem;
+    }
+
+    .candidate-photo-simple {
+        width: 90px;
+        height: 90px;
+    }
+}
+
+/* Current Question Display Styles */
+.current-question-section .card {
+    border: 2px solid #e9ecef;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+}
+
+.current-question-section .card:hover {
+    border-color: #007bff;
+    box-shadow: 0 6px 12px rgba(0,123,255,0.2);
+}
+
+.current-question-display {
+    padding: 10px 0;
+}
+
+.question-type-badge {
+    text-align: center;
+}
+
+.question-content {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 4px solid #007bff;
+    font-size: 1rem;
+    line-height: 1.5;
+}
+
+.options-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.option-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 15px;
+    background: #ffffff;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+}
+
+.option-item.correct-option {
+    background: linear-gradient(135deg, #d4edda 0%, #ffffff 100%);
+    border-color: #28a745;
+}
+
+.option-label {
+    font-weight: bold;
+    color: #007bff;
+    min-width: 20px;
+}
+
+.option-text {
+    flex: 1;
+    color: #495057;
+}
+
+.answer-content {
+    background: linear-gradient(135deg, #d1ecf1 0%, #ffffff 100%);
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 4px solid #28a745;
+    font-size: 1rem;
+    line-height: 1.5;
+    color: #155724;
+}
+
+/* True/False Answer Styles */
+.correct-answer-section {
+    text-align: center;
+}
+
+.true-false-answer {
+    display: inline-block;
+    padding: 10px 20px;
+    border-radius: 25px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.true-false-answer.true {
+    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+    border: 2px solid #28a745;
+    color: #155724;
+}
+
+.true-false-answer.false {
+    background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+    border: 2px solid #dc3545;
+    color: #721c24;
+}
+
+.answer-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+}
+
+/* Evaluation Criteria Styles */
+.evaluation-criteria-section .card {
+    border: 1px solid #e9ecef;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+}
+
+.evaluation-topic-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.topic-header {
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.topic-name {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #2c3e50;
+    margin: 0;
+}
+
+.topic-description {
+    color: #6c757d;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    margin-bottom: 12px;
+}
+
+.criteria-grid {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 8px;
+    justify-content: space-between;
+}
+
+.criteria-item {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 10px;
+    text-align: center;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    flex: 1;
+    min-width: 0;
+}
+
+.criteria-item.clickable-criteria:hover {
+    background: #e9ecef;
+    border-color: #007bff;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,123,255,0.2);
+}
+
+.criteria-item:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.criteria-badge {
+    color: white;
+    padding: 6px 12px;
+    border-radius: 15px;
+    font-weight: 500;
+    font-size: 0.85rem;
+    margin-bottom: 6px;
+    display: inline-block;
+}
+
+.criteria-description {
+    color: #6c757d;
+    font-size: 0.75rem;
+    line-height: 1.2;
+}
+
+/* Selected criteria styles */
+.criteria-item.selected-criteria {
+    background: linear-gradient(135deg, #e3f2fd 0%, #f8f9fa 100%);
+    border: 2px solid #007bff;
+    box-shadow: 0 4px 12px rgba(0,123,255,0.3);
+    transform: translateY(-2px);
+}
+
+.criteria-item.selected-criteria .criteria-badge {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* Topic evaluation status */
+.topic-evaluation-status {
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+}
+
+/* Evaluation summary styles */
+.evaluation-summary-section .card {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+.evaluation-summary-stats {
+    padding: 10px 0;
+}
+
+.summary-stat {
+    padding: 10px;
+}
+
+.stat-number {
+    font-size: 1.5rem;
+    font-weight: bold;
+    line-height: 1;
+}
+
+.stat-label {
+    font-size: 0.75rem;
+    color: #6c757d;
+    margin-top: 4px;
+}
+
+.evaluation-details {
+    border-top: 1px solid #dee2e6;
+    padding-top: 15px;
+}
+
+.evaluation-detail-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 12px;
+    margin-bottom: 6px;
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
+}
+
+.topic-name-small {
+    font-weight: 500;
+    color: #495057;
+    font-size: 0.85rem;
+}
+
+.criteria-name-small {
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+/* Mobile responsive for criteria */
+@media (max-width: 768px) {
+    .criteria-grid {
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .criteria-item {
+        min-width: calc(50% - 3px);
+        flex: none;
+    }
+
+    .criteria-badge {
+        font-size: 0.8rem;
+        padding: 5px 10px;
+    }
+
+    .criteria-description {
+        font-size: 0.7rem;
+    }
+
+    .evaluation-detail-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+
+    .stat-number {
+        font-size: 1.2rem;
+    }
+}
+
+/* Simple Results Card */
+.simple-results-card {
+    border: 1px solid #e9ecef;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.simple-results-header {
+    background: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+    padding: 12px 20px;
+}
+
+.simple-results-header h6 {
+    font-weight: 600;
+    color: #495057;
+    margin: 0;
+}
+
+/* Simple Score Display */
+.simple-score-display {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.main-score-card {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 0 auto;
+    max-width: 250px;
+}
+
+.score-percentage {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.percentage-number {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: #495057;
+}
+
+.grade-badge {
+    font-size: 0.9rem;
+    padding: 6px 12px;
+}
+
+/* Simple Stats Row */
+.simple-stats-row {
+    margin-bottom: 20px;
+}
+
+.stat-item {
+    text-align: center;
+    padding: 15px;
+    background: #ffffff;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    margin: 5px 0;
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #495057;
+    margin-bottom: 5px;
+}
+
+.stat-text {
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+/* Simple Topics Section */
+.simple-topics-section {
+    border-top: 1px solid #e9ecef;
+    padding-top: 15px;
+    margin-top: 15px;
+}
+
+.topics-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #6c757d;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.topics-list {
+    max-height: 250px;
+    overflow-y: auto;
+}
+
+.topic-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    background: #ffffff;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    transition: background-color 0.2s ease;
+}
+
+.topic-item:hover {
+    background: #f8f9fa;
+}
+
+.topic-info {
+    flex: 1;
+}
+
+.topic-title {
+    font-weight: 500;
+    font-size: 0.9rem;
+    color: #495057;
+    display: block;
+    margin-bottom: 2px;
+}
+
+.topic-detail {
+    color: #6c757d;
+    font-size: 0.75rem;
+}
+
+.topic-result {
+    margin-right: 10px;
+}
+
+.topic-result .badge {
+    font-size: 0.8rem;
+    padding: 4px 8px;
+}
+
+/* Mobile responsive for simple results */
+@media (max-width: 768px) {
+    .simple-results-header {
+        padding: 10px 15px;
+    }
+
+    .main-score-card {
+        padding: 15px;
+        max-width: 200px;
+    }
+
+    .percentage-number {
+        font-size: 2rem;
+    }
+
+    .grade-badge {
+        font-size: 0.8rem;
+        padding: 5px 10px;
+    }
+
+    .score-percentage {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .stat-item {
+        padding: 12px;
+        margin: 3px 0;
+    }
+
+    .stat-value {
+        font-size: 1.3rem;
+    }
+
+    .stat-text {
+        font-size: 0.8rem;
+    }
+
+    .topics-title {
+        font-size: 0.85rem;
+    }
+
+    .topic-item {
+        padding: 8px 10px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
+    }
+
+    .topic-result {
+        margin-right: 0;
+        align-self: flex-end;
+    }
+}
+
+/* Save evaluation button section */
+.save-evaluation-section {
+    position: relative;
+    z-index: 100;
+}
+
+.save-evaluation-section .card {
+    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.15);
+    border: 2px solid #28a745;
+    background: linear-gradient(135deg, #f8fff9 0%, #ffffff 100%);
+}
+
+.save-evaluation-section .btn-success {
+    font-size: 1.1rem;
+    font-weight: 600;
+    padding: 12px 30px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+    transition: all 0.3s ease;
+}
+
+.save-evaluation-section .btn-success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+}
+
+.save-evaluation-section .btn-success:active {
+    transform: translateY(0);
+}
+
+.save-evaluation-section .btn-success:disabled {
+    opacity: 0.7;
+    transform: none;
+}
+
+/* Status messages */
+#saveStatus .alert {
+    margin-bottom: 0;
+    border-radius: 6px;
+    font-size: 0.95rem;
+}
+
+#saveStatus .alert-success {
+    background-color: #d4edda;
+    border-color: #c3e6cb;
+    color: #155724;
+}
+
+#saveStatus .alert-danger {
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+    color: #721c24;
+}
+
+/* Mobile responsive for save button */
+@media (max-width: 768px) {
+    .save-evaluation-section .btn-success {
+        font-size: 1rem;
+        padding: 10px 25px;
+    }
+
+    .save-evaluation-section .card-body {
+        padding: 15px;
+    }
+}
+</style>
+{% endblock %}

@@ -1,0 +1,65 @@
+.party_name{
+    color: #FFF;
+}
+
+p, li, a, tr, td, th, input, label {
+    font-size: 17px !important;
+    font-weight: 500 !important;
+}
+
+.party_name>p{
+    font-size: inherit !important;
+}
+
+.parsley-required, .parsley-errors-list{
+    list-style: none;
+    margin-right: -15px;
+    color: red;
+}
+
+.parsley-error {
+    border-color: red !important;
+}
+
+.select2-container--default .select2-selection--single {
+    padding: 0.4rem 0.2rem;
+    line-height: 1.5em;
+    border: 1px solid #ced4da;
+    border-radius: 0.25rem;
+    height: 41px;
+}
+
+.select2-container {
+    width:100% !important;
+}
+
+input:focus {
+    outline: none;
+    box-shadow: none;
+}
+
+.select2-close-mask{
+    z-index: 2099;
+}
+.select2-dropdown{
+    z-index: 3051;
+}
+
+.form-check {
+    padding-right: 1.75em !important;
+}
+
+
+wrap-text {
+    white-space: normal !important;
+    word-wrap: break-word !important;
+}
+
+select {
+    height: 42px;
+}
+
+.pagination-rounded .page-link{
+    width:39px;
+}
+

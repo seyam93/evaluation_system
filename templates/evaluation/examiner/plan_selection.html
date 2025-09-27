@@ -1,0 +1,528 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2 class="text-primary">{{ title }}</h2>
+                <a href="{% url 'evaluation:examiner_dashboard' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-right"></i> العودة للوحة التحكم
+                </a>
+            </div>
+            <p class="text-muted">اختر خطة التوظيف التي تريد إنشاء جلسة تقييم لها</p>
+        </div>
+    </div>
+
+    <!-- Search and Filters -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="get" class="row align-items-end">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">البحث في الخطط</label>
+                            <input type="text"
+                                   name="search"
+                                   class="form-control"
+                                   placeholder="اسم الخطة أو القسم..."
+                                   value="{{ request.GET.search }}">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">الحالة</label>
+                            <select name="status" class="form-control">
+                                <option value="">جميع الحالات</option>
+                                <option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>نشطة</option>
+                                <option value="inactive" {% if request.GET.status == 'inactive' %}selected{% endif %}>غير نشطة</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <button type="submit" class="btn btn-primary me-2">
+                                <i class="fas fa-search"></i> بحث
+                            </button>
+                            <a href="{% url 'evaluation:plan_selection' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times"></i> إعادة تعيين
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Plans Grid -->
+    <div class="row">
+        {% for plan in plans %}
+        <div class="col-md-6 mb-4">
+            <div class="card plan-card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 text-primary">
+                        <i class="fas fa-briefcase"></i>
+                        {{ plan.title }}
+                    </h5>
+                    <span class="badge {% if plan.is_active %}badge-success{% else %}badge-secondary{% endif %}">
+                        {% if plan.is_active %}نشطة{% else %}غير نشطة{% endif %}
+                    </span>
+                </div>
+
+                <div class="card-body">
+                    <!-- Plan Details -->
+                    <div class="plan-info mb-3">
+                        <div class="row">
+                            <div class="col-6">
+                                <small class="text-muted">القسم:</small>
+                                <div class="font-weight-bold text-dark">{{ plan.department }}</div>
+                            </div>
+                            <div class="col-6">
+                                <small class="text-muted">عدد المرشحين:</small>
+                                <div class="font-weight-bold text-dark">{{ plan.total_candidates }}</div>
+                            </div>
+                        </div>
+
+                        <div class="row mt-2">
+                            <div class="col-6">
+                                <small class="text-muted">تاريخ الإنشاء:</small>
+                                <div class="font-weight-bold text-dark">{{ plan.created_at|date:"Y/m/d" }}</div>
+                            </div>
+                            <div class="col-6">
+                                <small class="text-muted">آخر تحديث:</small>
+                                <div class="font-weight-bold text-dark">{{ plan.updated_at|date:"Y/m/d" }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notes -->
+                    {% if plan.notes %}
+                    <div class="notes mb-3">
+                        <small class="text-muted">ملاحظات:</small>
+                        <p class="text-dark mb-0">{{ plan.notes|truncatewords:20 }}</p>
+                    </div>
+                    {% endif %}
+
+                    <!-- Existing Sessions -->
+                    <div class="existing-sessions mb-3">
+                        <small class="text-muted">الجلسات الموجودة:</small>
+                        {% with plan.evaluation_sessions.all as sessions %}
+                        {% if sessions %}
+                        <div class="sessions-list">
+                            {% for session in sessions|slice:":3" %}
+                            <div class="session-item d-flex justify-content-between align-items-center">
+                                <small class="text-dark">{{ session.session_date }}</small>
+                                <span class="badge badge-sm
+                                    {% if session.status == 'completed' %}badge-success
+                                    {% elif session.status == 'active' %}badge-warning
+                                    {% elif session.status == 'paused' %}badge-secondary
+                                    {% elif session.status == 'setup' %}badge-info
+                                    {% else %}badge-danger{% endif %}">
+                                    {{ session.get_status_display }}
+                                </span>
+                            </div>
+                            {% endfor %}
+                            {% if sessions.count > 3 %}
+                            <small class="text-muted">و {{ sessions.count|add:"-3" }} جلسة أخرى...</small>
+                            {% endif %}
+                        </div>
+                        {% else %}
+                        <small class="text-muted">لا توجد جلسات سابقة</small>
+                        {% endif %}
+                        {% endwith %}
+                    </div>
+
+                    <!-- Candidates Progress -->
+                    <div class="candidates-progress mb-3">
+                        {% if plan.total_candidates > 0 %}
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <small class="text-muted">تقدم التقييم:</small>
+                            <small class="text-muted">{{ plan.evaluated_candidates }}/{{ plan.total_candidates }}</small>
+                        </div>
+                        <div class="progress" style="height: 6px;">
+                            <div class="progress-bar bg-success" style="width: {{ plan.progress_percentage }}%">
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Card Actions -->
+                <div class="card-footer">
+                    <div style="padding: 15px; text-align: center;">
+                        {% if plan.is_active and plan.total_candidates > 0 %}
+                        <div style="margin-bottom: 15px;">
+                            <a href="{% url 'evaluation:session_create_for_plan' plan.id %}"
+                               style="display: inline-block; background-color: #28a745; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 5px;">
+                                ➕ إنشاء جلسة تقييم
+                            </a>
+                        </div>
+                        {% else %}
+                        <div style="margin-bottom: 15px;">
+                            <span style="display: inline-block; background-color: #6c757d; color: white; padding: 12px 25px; border-radius: 5px; font-weight: bold; margin: 5px;">
+                                🚫 {% if not plan.is_active %}خطة غير نشطة{% else %}لا يوجد مرشحين{% endif %}
+                            </span>
+                        </div>
+                        {% endif %}
+
+                        <div>
+                            <a href="{% url 'students:plan_detail' plan.id %}"
+                               title="عرض تفاصيل الخطة"
+                               style="display: inline-block; border: 2px solid #17a2b8; color: #17a2b8; padding: 8px 15px; text-decoration: none; border-radius: 4px; margin: 3px; font-weight: bold;">
+                                👁️ عرض التفاصيل
+                            </a>
+                            <a href="{% url 'students:candidate_list' %}?plan={{ plan.id }}"
+                               title="عرض المرشحين"
+                               style="display: inline-block; border: 2px solid #007bff; color: #007bff; padding: 8px 15px; text-decoration: none; border-radius: 4px; margin: 3px; font-weight: bold;">
+                                👥 عرض المرشحين
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
+                    <h5 class="text-muted">لا توجد خطط توظيف متاحة</h5>
+                    <p class="text-muted mb-4">لا توجد خطط توظيف تطابق معايير البحث المحددة</p>
+                    {% if request.GET.search or request.GET.status %}
+                    <a href="{% url 'evaluation:plan_selection' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-times"></i> إعادة تعيين الفلاتر
+                    </a>
+                    {% else %}
+                    <a href="{% url 'students:plan_create' %}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> إنشاء خطة توظيف جديدة
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if plans.has_other_pages %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <nav aria-label="تصفح الصفحات">
+                <ul class="pagination justify-content-center">
+                    {% if plans.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ plans.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">
+                            السابق
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% for num in plans.paginator.page_range %}
+                    {% if plans.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% elif num > plans.number|add:'-3' and num < plans.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">
+                            {{ num }}
+                        </a>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+
+                    {% if plans.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ plans.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">
+                            التالي
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.plan-card {
+    transition: all 0.3s ease;
+    border: 1px solid #dee2e6;
+}
+
+.plan-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    border-color: #007bff;
+}
+
+.plan-info {
+    background-color: #f8f9fa;
+    padding: 12px;
+    border-radius: 6px;
+    border-left: 4px solid #007bff;
+}
+
+.sessions-list {
+    max-height: 80px;
+    overflow-y: auto;
+}
+
+.session-item {
+    padding: 4px 8px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    margin-bottom: 4px;
+}
+
+.session-item:last-child {
+    margin-bottom: 0;
+}
+
+.notes {
+    background-color: #fff3cd;
+    padding: 8px;
+    border-radius: 4px;
+    border-left: 3px solid #ffc107;
+}
+
+.candidates-progress {
+    background-color: #e7f3ff;
+    padding: 8px;
+    border-radius: 4px;
+    border-left: 3px solid #007bff;
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.card-footer {
+    background-color: #f8f9fa;
+    border-top: 1px solid #dee2e6;
+}
+
+.badge-sm {
+    font-size: 0.7em;
+    padding: 2px 6px;
+}
+
+.progress {
+    background-color: #e9ecef;
+}
+
+.btn-group .btn {
+    border-radius: 0;
+}
+
+.btn-group .btn:first-child {
+    border-radius: 0.25rem 0 0 0.25rem;
+}
+
+.btn-group .btn:last-child {
+    border-radius: 0 0.25rem 0.25rem 0;
+}
+
+/* Button Base Styles */
+.btn {
+    display: inline-block;
+    padding: 8px 16px;
+    margin-bottom: 0;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.42857143;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: middle;
+    cursor: pointer;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    user-select: none;
+}
+
+.btn:hover,
+.btn:focus {
+    text-decoration: none;
+    outline: none;
+}
+
+.btn:active {
+    outline: none;
+    box-shadow: inset 0 3px 5px rgba(0,0,0,.125);
+}
+
+.btn[disabled],
+.btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* Button Variants */
+.btn-success {
+    color: #fff;
+    background-color: #28a745;
+    border-color: #28a745;
+}
+
+.btn-success:hover,
+.btn-success:focus {
+    color: #fff;
+    background-color: #218838;
+    border-color: #1e7e34;
+}
+
+.btn-secondary {
+    color: #fff;
+    background-color: #6c757d;
+    border-color: #6c757d;
+}
+
+.btn-secondary:hover,
+.btn-secondary:focus {
+    color: #fff;
+    background-color: #5a6268;
+    border-color: #545b62;
+}
+
+.btn-outline-info {
+    color: #17a2b8;
+    background-color: transparent;
+    border-color: #17a2b8;
+}
+
+.btn-outline-info:hover,
+.btn-outline-info:focus {
+    color: #fff;
+    background-color: #17a2b8;
+    border-color: #17a2b8;
+}
+
+.btn-outline-primary {
+    color: #007bff;
+    background-color: transparent;
+    border-color: #007bff;
+}
+
+.btn-outline-primary:hover,
+.btn-outline-primary:focus {
+    color: #fff;
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+.btn-primary {
+    color: #fff;
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+    color: #fff;
+    background-color: #0069d9;
+    border-color: #0062cc;
+}
+
+/* Button Sizes */
+.btn-sm {
+    padding: 5px 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    border-radius: 4px;
+}
+
+.btn-lg {
+    padding: 12px 24px;
+    font-size: 16px;
+    line-height: 1.33;
+    border-radius: 8px;
+}
+
+/* Flexbox utilities */
+.d-flex {
+    display: flex !important;
+}
+
+.justify-content-between {
+    justify-content: space-between !important;
+}
+
+.align-items-center {
+    align-items: center !important;
+}
+
+/* Button group */
+.btn-group {
+    position: relative;
+    display: inline-flex;
+    vertical-align: middle;
+}
+
+.card-footer {
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border-top: 1px solid #dee2e6;
+}
+
+.form-label {
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 4px;
+}
+
+.text-dark {
+    color: #333 !important;
+}
+
+.font-weight-bold {
+    font-weight: 600 !important;
+}
+
+.fa-4x {
+    font-size: 4em;
+}
+
+.pagination .page-link {
+    color: #007bff;
+    border-color: #dee2e6;
+}
+
+.pagination .page-item.active .page-link {
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+.pagination .page-link:hover {
+    color: #0056b3;
+    background-color: #e9ecef;
+    border-color: #dee2e6;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add loading state to buttons
+    document.querySelectorAll('.btn-success').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الإنشاء...';
+            this.disabled = true;
+        });
+    });
+
+    // Auto-hide alerts after 5 seconds
+    setTimeout(function() {
+        document.querySelectorAll('.alert').forEach(function(alert) {
+            alert.style.transition = 'opacity 0.5s';
+            alert.style.opacity = '0';
+            setTimeout(function() {
+                alert.remove();
+            }, 500);
+        });
+    }, 5000);
+});
+</script>
+{% endblock %}

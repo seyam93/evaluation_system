@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block title %}Server Error - MyProject{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="error-page">
+        <h1>500</h1>
+        <h2>Internal Server Error</h2>
+        <p>Something went wrong on our end. Please try again later.</p>
+        <a href="{% url 'home' %}" class="btn btn-primary">Go Home</a>
+    </div>
+</div>
+
+<style>
+.error-page {
+    text-align: center;
+    padding: 50px 0;
+}
+
+.error-page h1 {
+    font-size: 6rem;
+    color: #e74c3c;
+    margin-bottom: 20px;
+}
+
+.error-page h2 {
+    font-size: 2rem;
+    margin-bottom: 20px;
+}
+
+.error-page p {
+    font-size: 1.1rem;
+    margin-bottom: 30px;
+    color: #666;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,550 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="container mt-4">
+    <!-- Simple Header -->
+    <div class="header-section mb-4">
+        <h2 class="session-title">{{ session.plan.title }}</h2>
+        <div class="session-meta">
+            <span class="status-badge status-{{ session.status }}">{{ session.get_status_display }}</span>
+            <span class="date-info">{{ session.session_date }}</span>
+        </div>
+    </div>
+
+    <!-- Current Candidate Display -->
+    {% if session.current_candidate %}
+    <div class="current-candidate-card mb-4">
+        <div class="current-badge">
+            <i class="fas fa-user-check"></i>
+            المرشح الحالي
+        </div>
+        <div class="candidate-info">
+            <img src="{{ session.current_candidate.get_profile_image_url }}"
+                 alt="صورة المرشح"
+                 class="candidate-photo">
+            <div class="candidate-details">
+                <h3>{{ session.current_candidate.student_name }}</h3>
+                <p>{{ session.current_candidate.primary_qualification|default:"غير محدد" }}</p>
+                <small>{{ session.current_candidate.university|default:"غير محدد" }}</small>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="no-candidate-card mb-4">
+        <i class="fas fa-user-plus"></i>
+        <p>يرجى اختيار مرشح للعرض على اللجنة</p>
+    </div>
+    {% endif %}
+
+    <!-- Session Controls - Simple -->
+    <div class="controls-section mb-4">
+        {% if session.status == 'setup' %}
+            <a href="{% url 'evaluation:session_start' session.id %}" class="btn-primary">
+                <i class="fas fa-play"></i> بدء الجلسة
+            </a>
+        {% elif session.status == 'active' %}
+            <a href="{% url 'evaluation:session_pause' session.id %}" class="btn-warning">
+                <i class="fas fa-pause"></i> إيقاف مؤقت
+            </a>
+            <a href="{% url 'evaluation:session_complete' session.id %}" class="btn-danger"
+               onclick="return confirm('هل أنت متأكد من إنهاء الجلسة؟')">
+                <i class="fas fa-stop"></i> إنهاء
+            </a>
+        {% elif session.status == 'paused' %}
+            <a href="{% url 'evaluation:session_resume' session.id %}" class="btn-success">
+                <i class="fas fa-play"></i> استئناف
+            </a>
+        {% endif %}
+    </div>
+
+    <!-- Quick Progress -->
+    <div class="progress-info mb-4">
+        <div class="progress-item">
+            <span class="number">{{ session.total_candidates }}</span>
+            <span class="label">إجمالي المرشحين</span>
+        </div>
+        <div class="progress-item">
+            <span class="number">{{ session.evaluated_candidates_count }}</span>
+            <span class="label">تم تقييمهم</span>
+        </div>
+        <div class="progress-item">
+            <span class="number">{{ session.progress_percentage }}%</span>
+            <span class="label">الإنجاز</span>
+        </div>
+    </div>
+
+    <!-- Simple Candidate Selection -->
+    <div class="candidate-selection">
+        <h3>اختيار المرشح</h3>
+        {% if all_candidates %}
+            <div class="candidates-grid">
+                {% for candidate in all_candidates %}
+                    <div class="candidate-item {% if session.current_candidate and session.current_candidate.id == candidate.id %}current{% endif %}"
+                         data-candidate-id="{{ candidate.id }}">
+                        <img src="{{ candidate.get_profile_image_url }}" alt="صورة المرشح">
+                        <div class="candidate-name">{{ candidate.student_name }}</div>
+                        {% if session.current_candidate and session.current_candidate.id == candidate.id %}
+                            <div class="current-indicator">
+                                <i class="fas fa-check-circle"></i> محدد
+                            </div>
+                        {% else %}
+                            <button class="select-btn" data-candidate-id="{{ candidate.id }}">
+                                <i class="fas fa-hand-pointer"></i> اختيار
+                            </button>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="no-candidates">
+                <i class="fas fa-user-times"></i>
+                <p>لا توجد مرشحين في هذه الخطة</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+/* Clean, minimal styling */
+.container {
+    max-width: 900px;
+}
+
+.header-section {
+    text-align: center;
+    padding: 30px 0;
+    border-bottom: 3px solid #e5e7eb;
+}
+
+.session-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin: 0 0 15px 0;
+}
+
+.session-meta {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    align-items: center;
+}
+
+.status-badge {
+    padding: 8px 20px;
+    border-radius: 25px;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.status-setup { background: #dbeafe; color: #1d4ed8; }
+.status-active { background: #fef3c7; color: #d97706; }
+.status-paused { background: #f3f4f6; color: #6b7280; }
+.status-completed { background: #dcfce7; color: #166534; }
+
+.date-info {
+    color: #6b7280;
+    font-weight: 500;
+}
+
+/* Current Candidate Card */
+.current-candidate-card {
+    background: linear-gradient(135deg, #f0f9ff 0%, #ffffff 100%);
+    border: 2px solid #3b82f6;
+    border-radius: 20px;
+    padding: 30px;
+    position: relative;
+    overflow: hidden;
+}
+
+.current-badge {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: #3b82f6;
+    color: white;
+    padding: 8px 20px;
+    border-radius: 0 20px 0 20px;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.candidate-info {
+    display: flex;
+    align-items: center;
+    gap: 25px;
+}
+
+.candidate-photo {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 4px solid white;
+    box-shadow: 0 4px 20px rgba(59, 130, 246, 0.3);
+}
+
+.candidate-details h3 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin: 0 0 8px 0;
+}
+
+.candidate-details p {
+    color: #6b7280;
+    margin: 0 0 5px 0;
+    font-size: 1rem;
+}
+
+.candidate-details small {
+    color: #9ca3af;
+    font-size: 0.9rem;
+}
+
+/* No Candidate */
+.no-candidate-card {
+    text-align: center;
+    padding: 60px;
+    background: #f9fafb;
+    border: 2px dashed #d1d5db;
+    border-radius: 20px;
+}
+
+.no-candidate-card i {
+    font-size: 3rem;
+    color: #9ca3af;
+    margin-bottom: 15px;
+}
+
+.no-candidate-card p {
+    color: #6b7280;
+    font-size: 1.1rem;
+    margin: 0;
+}
+
+/* Controls */
+.controls-section {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+}
+
+.controls-section a {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 25px;
+    border-radius: 25px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background: #3b82f6;
+    color: white;
+    border: 2px solid #3b82f6;
+}
+
+.btn-primary:hover {
+    background: #2563eb;
+    transform: translateY(-2px);
+}
+
+.btn-warning {
+    background: #f59e0b;
+    color: white;
+    border: 2px solid #f59e0b;
+}
+
+.btn-warning:hover {
+    background: #d97706;
+    transform: translateY(-2px);
+}
+
+.btn-danger {
+    background: #ef4444;
+    color: white;
+    border: 2px solid #ef4444;
+}
+
+.btn-danger:hover {
+    background: #dc2626;
+    transform: translateY(-2px);
+}
+
+.btn-success {
+    background: #10b981;
+    color: white;
+    border: 2px solid #10b981;
+}
+
+.btn-success:hover {
+    background: #059669;
+    transform: translateY(-2px);
+}
+
+/* Progress Info */
+.progress-info {
+    display: flex;
+    justify-content: space-around;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.progress-item {
+    text-align: center;
+}
+
+.progress-item .number {
+    display: block;
+    font-size: 2rem;
+    font-weight: 700;
+    color: #3b82f6;
+}
+
+.progress-item .label {
+    color: #6b7280;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+/* Candidate Selection */
+.candidate-selection h3 {
+    color: #1f2937;
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.candidates-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.candidate-item {
+    background: white;
+    border: 2px solid #e5e7eb;
+    border-radius: 15px;
+    padding: 20px;
+    text-align: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.candidate-item:hover {
+    border-color: #3b82f6;
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.candidate-item.current {
+    border-color: #10b981;
+    background: linear-gradient(135deg, #ecfdf5 0%, #ffffff 100%);
+}
+
+.candidate-item img {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-bottom: 10px;
+    border: 3px solid #e5e7eb;
+}
+
+.candidate-item.current img {
+    border-color: #10b981;
+}
+
+.candidate-name {
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 10px;
+}
+
+.select-btn {
+    background: #3b82f6;
+    color: white;
+    border: none;
+    padding: 6px 15px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.select-btn:hover {
+    background: #2563eb;
+    transform: scale(1.05);
+}
+
+.current-indicator {
+    color: #10b981;
+    font-weight: 600;
+    font-size: 0.8rem;
+}
+
+.no-candidates {
+    text-align: center;
+    padding: 40px;
+    color: #6b7280;
+}
+
+.no-candidates i {
+    font-size: 2rem;
+    margin-bottom: 10px;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .header-section {
+        padding: 20px 0;
+    }
+
+    .session-title {
+        font-size: 1.5rem;
+    }
+
+    .session-meta {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .candidate-info {
+        flex-direction: column;
+        text-align: center;
+        gap: 15px;
+    }
+
+    .candidate-photo {
+        width: 80px;
+        height: 80px;
+    }
+
+    .controls-section {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .progress-info {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .candidates-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 15px;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const sessionId = {{ session.id }};
+
+    // Handle candidate selection
+    document.querySelectorAll('.select-btn').forEach(function(button) {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+
+            const candidateId = this.getAttribute('data-candidate-id');
+            const candidateItem = this.closest('.candidate-item');
+            const candidateName = candidateItem.querySelector('.candidate-name').textContent;
+
+            // Update UI immediately
+            updateCurrentCandidate(candidateId, candidateName);
+            showMessage('تم اختيار ' + candidateName, 'success');
+
+            // Send to server
+            const formData = new FormData();
+            formData.append('candidate_id', candidateId);
+            formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+
+            fetch(`/evaluation/examiner/session/${sessionId}/set-candidate/`, {
+                method: 'POST',
+                body: formData
+            });
+        });
+    });
+
+    function updateCurrentCandidate(candidateId, candidateName) {
+        // Update candidate items
+        document.querySelectorAll('.candidate-item').forEach(function(item) {
+            const itemId = item.dataset.candidateId;
+
+            if (itemId === candidateId) {
+                item.classList.add('current');
+                item.innerHTML = item.innerHTML.replace(
+                    /<button.*<\/button>/,
+                    '<div class="current-indicator"><i class="fas fa-check-circle"></i> محدد</div>'
+                );
+            } else {
+                item.classList.remove('current');
+                const indicator = item.querySelector('.current-indicator');
+                if (indicator) {
+                    indicator.outerHTML = `<button class="select-btn" data-candidate-id="${itemId}"><i class="fas fa-hand-pointer"></i> اختيار</button>`;
+                }
+            }
+        });
+
+        // Re-attach event listeners
+        document.querySelectorAll('.select-btn').forEach(function(button) {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+
+                const candidateId = this.getAttribute('data-candidate-id');
+                const candidateItem = this.closest('.candidate-item');
+                const candidateName = candidateItem.querySelector('.candidate-name').textContent;
+
+                updateCurrentCandidate(candidateId, candidateName);
+                showMessage('تم اختيار ' + candidateName, 'success');
+
+                const formData = new FormData();
+                formData.append('candidate_id', candidateId);
+                formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+
+                fetch(`/evaluation/examiner/session/${sessionId}/set-candidate/`, {
+                    method: 'POST',
+                    body: formData
+                });
+            });
+        });
+    }
+
+    function showMessage(message, type) {
+        const messageDiv = document.createElement('div');
+        messageDiv.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: ${type === 'success' ? '#10b981' : '#ef4444'};
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            font-weight: 600;
+            z-index: 9999;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        `;
+        messageDiv.textContent = message;
+        document.body.appendChild(messageDiv);
+
+        setTimeout(() => {
+            if (messageDiv.parentNode) {
+                messageDiv.remove();
+            }
+        }, 3000);
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,473 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}واجهة الأسئلة للجنة{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="page-header">
+        <div class="row align-items-center">
+            <div class="col">
+                <h1 class="plan-title">{{ active_session.plan.title }}</h1>
+                <div class="candidate-info">
+                    <span class="candidate-name">{{ active_session.current_candidate.student_name }}</span>
+                    <span class="session-status">جلسة نشطة</span>
+                </div>
+            </div>
+            <div class="col-auto">
+                <a href="{% url 'accounts:committee_dashboard' %}" class="btn btn-outline-primary">
+                    العودة للوحة التحكم
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Questions Section -->
+    <div class="questions-section">
+        <div class="section-header">
+            <h2>بنك الأسئلة</h2>
+            <p>انقر على أي سؤال لعرض السؤال والإجابة النموذجية</p>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="questions-list">
+                    {% for question in questions %}
+                        <div class="question-item" onclick="showQuestionWithAnswer({{ question.id }}, '{{ question.question_type }}')">
+                            <div class="question-header">
+                                <div class="question-type">
+                                    {% if question.question_type == 'mcq' %}
+                                        اختيار من متعدد
+                                    {% elif question.question_type == 'true_false' %}
+                                        صح أم خطأ
+                                    {% else %}
+                                        سؤال وجواب
+                                    {% endif %}
+                                </div>
+                                <div class="question-id">#{{ question.id }}</div>
+                            </div>
+                            <div class="question-preview">
+                                {{ question.question_text|truncatewords:10 }}
+                            </div>
+                            <button class="view-btn">
+                                <i class="fas fa-eye"></i>
+                                عرض مع الإجابة
+                            </button>
+                        </div>
+                    {% empty %}
+                        <div class="no-questions">
+                            <i class="fas fa-question-circle"></i>
+                            <p>لا توجد أسئلة متاحة حالياً</p>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <!-- Question Display Area -->
+                <div class="question-display sticky-top" id="questionDisplay">
+                    <div class="display-header">
+                        <h3>السؤال والإجابة</h3>
+                        <div class="display-status">
+                            <span id="questionStatus">اختر سؤال للعرض</span>
+                        </div>
+                    </div>
+                    <div class="question-content" id="questionContent">
+                        <div class="empty-state">
+                            <i class="fas fa-hand-pointer"></i>
+                            <p>انقر على أي سؤال من القائمة لعرضه مع الإجابة النموذجية</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Show selected question with answer (for committee members)
+function showQuestionWithAnswer(questionId, questionType) {
+    fetch(`/evaluation/ajax/qa-question/${questionId}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const questionStatus = document.getElementById('questionStatus');
+                const questionContent = document.getElementById('questionContent');
+
+                questionStatus.textContent = `السؤال #${questionId} - ${getQuestionTypeName(questionType)}`;
+
+                let html = `
+                    <div class="question-section">
+                        <h4>السؤال:</h4>
+                        <div class="question-text">${data.question}</div>
+                `;
+
+                if (questionType === 'mcq' && data.options) {
+                    html += `<div class="options-list">`;
+                    data.options.forEach((option, index) => {
+                        const label = String.fromCharCode(65 + index); // A, B, C, D
+                        const isCorrect = data.correct_answer === label;
+                        html += `
+                            <div class="option-item ${isCorrect ? 'correct-option' : ''}">
+                                ${label}. ${option}
+                                ${isCorrect ? '<span class="correct-mark">✓</span>' : ''}
+                            </div>
+                        `;
+                    });
+                    html += `</div>`;
+                } else if (questionType === 'true_false') {
+                    const correctAnswer = data.correct_answer === 'True' ? 'صحيح' : 'خطأ';
+                    html += `
+                        <div class="options-list">
+                            <div class="option-item ${data.correct_answer === 'True' ? 'correct-option' : ''}">
+                                أ. صحيح ${data.correct_answer === 'True' ? '<span class="correct-mark">✓</span>' : ''}
+                            </div>
+                            <div class="option-item ${data.correct_answer === 'False' ? 'correct-option' : ''}">
+                                ب. خطأ ${data.correct_answer === 'False' ? '<span class="correct-mark">✓</span>' : ''}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                if (data.answer) {
+                    html += `
+                        </div>
+                        <div class="answer-section">
+                            <h4>الإجابة النموذجية:</h4>
+                            <div class="answer-text">${data.answer}</div>
+                        </div>
+                    `;
+                }
+
+                questionContent.innerHTML = html;
+
+                // Highlight the selected question
+                document.querySelectorAll('.question-item').forEach(item => {
+                    item.classList.remove('active');
+                });
+                event.target.closest('.question-item').classList.add('active');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('حدث خطأ في تحميل السؤال');
+        });
+}
+
+function getQuestionTypeName(type) {
+    switch(type) {
+        case 'mcq': return 'اختيار من متعدد';
+        case 'true_false': return 'صح أم خطأ';
+        case 'qa': return 'سؤال وجواب';
+        default: return 'غير محدد';
+    }
+}
+
+// Auto refresh to sync with examinee
+setInterval(function() {
+    // Check for updates from examinee interface
+    // Implementation can be added later if needed for real-time sync
+}, 5000);
+</script>
+
+<style>
+/* Committee Exam Styles */
+.page-header {
+    background: linear-gradient(135deg, #1e40af 0%, #3730a3 100%);
+    color: white;
+    padding: 24px;
+    border-radius: 16px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 20px rgba(30, 64, 175, 0.15);
+}
+
+.plan-title {
+    font-size: 1.8rem;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.candidate-info {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+}
+
+.candidate-name {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.95rem;
+    font-weight: 500;
+}
+
+.session-status {
+    background: #10b981;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+/* Questions Section */
+.section-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.section-header h2 {
+    font-size: 1.8rem;
+    color: #1e293b;
+    margin: 0 0 8px 0;
+}
+
+.section-header p {
+    color: #64748b;
+    margin: 0;
+}
+
+.questions-list {
+    max-height: 70vh;
+    overflow-y: auto;
+    padding-right: 8px;
+}
+
+.question-item {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.question-item:hover {
+    border-color: #1e40af;
+    box-shadow: 0 4px 20px rgba(30, 64, 175, 0.15);
+    transform: translateY(-2px);
+}
+
+.question-item.active {
+    border-color: #1e40af;
+    background: #f0f9ff;
+    box-shadow: 0 4px 20px rgba(30, 64, 175, 0.15);
+}
+
+.question-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.question-type {
+    background: #1e40af;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.question-id {
+    color: #64748b;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.question-preview {
+    color: #374151;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    margin-bottom: 16px;
+    min-height: 48px;
+}
+
+.view-btn {
+    background: #059669;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: background-color 0.2s ease;
+    width: 100%;
+    justify-content: center;
+}
+
+.view-btn:hover {
+    background: #047857;
+}
+
+/* Question Display */
+.question-display {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    height: fit-content;
+    max-height: 70vh;
+    overflow-y: auto;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+}
+
+.display-header {
+    background: #f8fafc;
+    padding: 16px 24px;
+    border-bottom: 1px solid #e2e8f0;
+    border-radius: 16px 16px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.display-header h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    color: #1e293b;
+}
+
+.display-status {
+    color: #64748b;
+    font-size: 0.9rem;
+}
+
+.question-content {
+    padding: 24px;
+}
+
+.empty-state {
+    text-align: center;
+    color: #94a3b8;
+    padding: 40px 20px;
+}
+
+.empty-state i {
+    font-size: 3rem;
+    margin-bottom: 16px;
+}
+
+.empty-state p {
+    margin: 0;
+    font-size: 1.1rem;
+    line-height: 1.5;
+}
+
+.question-section, .answer-section {
+    margin-bottom: 24px;
+}
+
+.question-section h4, .answer-section h4 {
+    color: #1e293b;
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0 0 12px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.question-section h4:before {
+    content: "❓";
+    font-size: 1rem;
+}
+
+.answer-section h4:before {
+    content: "💡";
+    font-size: 1rem;
+}
+
+.question-text, .answer-text {
+    background: #f8fafc;
+    padding: 20px;
+    border-radius: 12px;
+    border-left: 4px solid #1e40af;
+    font-size: 1.1rem;
+    line-height: 1.6;
+    color: #1e293b;
+}
+
+.answer-text {
+    border-left-color: #059669;
+    background: #f0fdf4;
+}
+
+.options-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.option-item {
+    background: #f1f5f9;
+    padding: 12px 16px;
+    border-radius: 8px;
+    border: 2px solid #e2e8f0;
+    font-size: 1rem;
+    color: #374151;
+    transition: all 0.2s ease;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.option-item.correct-option {
+    background: #dcfce7;
+    border-color: #22c55e;
+    color: #166534;
+    font-weight: 500;
+}
+
+.correct-mark {
+    color: #22c55e;
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+
+.no-questions {
+    text-align: center;
+    color: #64748b;
+    padding: 60px 20px;
+    background: white;
+    border-radius: 12px;
+    border: 2px dashed #d1d5db;
+}
+
+.no-questions i {
+    font-size: 3rem;
+    margin-bottom: 16px;
+    color: #94a3b8;
+}
+
+.no-questions p {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .question-display {
+        margin-top: 20px;
+        position: static !important;
+    }
+
+    .questions-list {
+        max-height: 50vh;
+    }
+
+    .candidate-info {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+}
+</style>
+{% endblock %}

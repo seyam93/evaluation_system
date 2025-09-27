@@ -1,0 +1,324 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'assets/vendor/font-awesome/css/font-awesome.min.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <!-- Header -->
+        <div class="col-12 mb-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2 class="text-primary">{{ title }}</h2>
+                <div>
+                    <a href="{% url 'evaluation:question_create' %}" class="btn btn-success">
+                        <i class="fas fa-plus"></i> إضافة سؤال جديد
+                    </a>
+                    <a href="{% url 'evaluation:examiner_dashboard' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-right"></i> العودة للوحة التحكم
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="col-12 mb-4">
+            <div class="card">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-6">
+                            <label for="search" class="form-label">البحث</label>
+                            <input type="text" class="form-control" id="search" name="search"
+                                   value="{{ search_query }}" placeholder="البحث في العنوان أو النص">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="type" class="form-label">نوع السؤال</label>
+                            <select class="form-control" id="type" name="type">
+                                <option value="">جميع الأنواع</option>
+                                {% for type_value, type_label in question_types %}
+                                    <option value="{{ type_value }}" {% if type_filter == type_value %}selected{% endif %}>
+                                        {{ type_label }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary me-2">
+                                <i class="fas fa-search"></i> بحث
+                            </button>
+                            <a href="{% url 'evaluation:question_list' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times"></i> مسح
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Questions Table -->
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list text-primary"></i>
+                        قائمة الأسئلة ({{ page_obj.paginator.count }} سؤال)
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if page_obj %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>نص السؤال</th>
+                                        <th>النوع</th>
+                                        <th>الحالة</th>
+                                        <th>تاريخ الإنشاء</th>
+                                        <th class="text-center" style="width: 150px;">الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for question in page_obj %}
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div>
+                                                        <strong>{{ question.question_text|truncatechars:80 }}</strong>
+                                                        {% if question.question_type == 'qa' and question.answer %}
+                                                            <br>
+                                                            <span class="badge badge-info badge-sm">
+                                                                <i class="fas fa-lightbulb"></i> يحتوي على إجابة نموذجية
+                                                            </span>
+                                                        {% elif question.question_type == 'mcq' %}
+                                                            <br>
+                                                            <span class="badge badge-warning badge-sm">
+                                                                <i class="fas fa-list"></i> الإجابة الصحيحة: {{ question.correct_answer }}
+                                                            </span>
+                                                        {% elif question.question_type == 'true_false' %}
+                                                            <br>
+                                                            <span class="badge badge-primary badge-sm">
+                                                                <i class="fas fa-check"></i> الإجابة الصحيحة: {{ question.correct_answer }}
+                                                            </span>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span class="badge
+                                                    {% if question.question_type == 'qa' %}badge-warning
+                                                    {% elif question.question_type == 'mcq' %}badge-primary
+                                                    {% elif question.question_type == 'true_false' %}badge-info
+                                                    {% else %}badge-secondary{% endif %}">
+                                                    {{ question.get_question_type_display }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                {% if question.is_active %}
+                                                    <span class="badge badge-success">نشط</span>
+                                                {% else %}
+                                                    <span class="badge badge-secondary">غير نشط</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <small class="text-muted">{{ question.created_at|date:"Y/m/d H:i" }}</small>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="btn-group-actions">
+                                                    <a href="{% url 'evaluation:question_detail' question.id %}"
+                                                       class="btn btn-sm btn-outline-info mx-1"
+                                                       title="عرض التفاصيل">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
+                                                    <a href="{% url 'evaluation:question_update' question.id %}"
+                                                       class="btn btn-sm btn-outline-primary mx-1"
+                                                       title="تعديل">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                    <button type="button"
+                                                            class="btn btn-sm btn-outline-danger mx-1"
+                                                            onclick="confirmDelete({{ question.id }}, '{{ question.question_text|truncatechars:30 }}')"
+                                                            title="حذف">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Pagination -->
+                        {% if page_obj.has_other_pages %}
+                            <nav aria-label="Page navigation" class="mt-4">
+                                <ul class="pagination justify-content-center">
+                                    {% if page_obj.has_previous %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?{% if search_query %}search={{ search_query }}&{% endif %}{% if type_filter %}type={{ type_filter }}&{% endif %}page={{ page_obj.previous_page_number }}">السابق</a>
+                                        </li>
+                                    {% endif %}
+
+                                    {% for num in page_obj.paginator.page_range %}
+                                        {% if page_obj.number == num %}
+                                            <li class="page-item active">
+                                                <span class="page-link">{{ num }}</span>
+                                            </li>
+                                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="?{% if search_query %}search={{ search_query }}&{% endif %}{% if type_filter %}type={{ type_filter }}&{% endif %}page={{ num }}">{{ num }}</a>
+                                            </li>
+                                        {% endif %}
+                                    {% endfor %}
+
+                                    {% if page_obj.has_next %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?{% if search_query %}search={{ search_query }}&{% endif %}{% if type_filter %}type={{ type_filter }}&{% endif %}page={{ page_obj.next_page_number }}">التالي</a>
+                                        </li>
+                                    {% endif %}
+                                </ul>
+                            </nav>
+                        {% endif %}
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-question-circle fa-5x text-muted mb-3"></i>
+                            <h4 class="text-muted">لا توجد أسئلة</h4>
+                            <p class="text-muted">لم يتم العثور على أسئلة مطابقة لمعايير البحث</p>
+                            <a href="{% url 'evaluation:question_create' %}" class="btn btn-primary">
+                                <i class="fas fa-plus"></i> إضافة أول سؤال
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">تأكيد الحذف</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>هل أنت متأكد من حذف السؤال "<span id="questionTitle"></span>"؟</p>
+                <p class="text-danger small">هذا الإجراء لا يمكن التراجع عنه.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <form method="post" id="deleteForm" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">حذف</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function confirmDelete(questionId, questionTitle) {
+    document.getElementById('questionTitle').textContent = questionTitle;
+    document.getElementById('deleteForm').action = '/evaluation/questions/' + questionId + '/delete/';
+
+    // Show modal (Bootstrap 5)
+    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    modal.show();
+}
+
+// Quick actions
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-submit form on filter change
+    document.getElementById('type').addEventListener('change', function() {
+        this.form.submit();
+    });
+});
+</script>
+
+<style>
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.table th {
+    border-top: none;
+    font-weight: 600;
+    color: #000000;
+    background-color: #f8f9fa;
+}
+
+.table td {
+    color: #000000;
+    vertical-align: middle;
+}
+
+.table tbody tr:hover td {
+    color: #000000;
+}
+
+.table td strong,
+.table td span,
+.table td small {
+    color: #000000 !important;
+}
+
+.text-muted {
+    color: #333333 !important;
+}
+
+.badge {
+    font-size: 0.75em;
+}
+
+.badge-sm {
+    font-size: 0.65em;
+    padding: 0.25em 0.5em;
+}
+
+.btn-group-actions {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.btn-group-actions .btn {
+    min-width: 35px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mx-1 {
+    margin-left: 0.25rem !important;
+    margin-right: 0.25rem !important;
+}
+
+.fa-5x {
+    font-size: 5em;
+}
+
+.font-weight-bold {
+    font-weight: 600 !important;
+}
+
+.me-2 {
+    margin-right: 0.5rem !important;
+}
+
+.ml-1 {
+    margin-left: 0.25rem !important;
+}
+
+.g-3 > * {
+    padding: 0.75rem;
+}
+</style>
+{% endblock %}

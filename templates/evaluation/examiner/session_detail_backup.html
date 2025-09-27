@@ -1,0 +1,641 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="container mt-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2 class="text-primary">{{ title }}</h2>
+                <div>
+                    <a href="{% url 'evaluation:session_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-right"></i> العودة للجلسات
+                    </a>
+                    <a href="{% url 'evaluation:examiner_dashboard' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-home"></i> لوحة التحكم
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Session Info Card -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle text-primary"></i>
+                        معلومات الجلسة
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="info-item">
+                                <strong>خطة التوظيف:</strong>
+                                <span class="text-dark">{{ session.plan.title }}</span>
+                            </div>
+                            <div class="info-item">
+                                <strong>القسم:</strong>
+                                <span class="text-dark">{{ session.plan.department }}</span>
+                            </div>
+                            <div class="info-item">
+                                <strong>تاريخ الجلسة:</strong>
+                                <span class="text-dark">{{ session.session_date }}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-item">
+                                <strong>المشرف:</strong>
+                                <span class="text-dark">{{ session.examiner.get_full_name|default:session.examiner.username }}</span>
+                            </div>
+                            <div class="info-item">
+                                <strong>الحالة:</strong>
+                                <span class="badge
+                                    {% if session.status == 'setup' %}badge-info
+                                    {% elif session.status == 'active' %}badge-warning
+                                    {% elif session.status == 'paused' %}badge-secondary
+                                    {% elif session.status == 'completed' %}badge-success
+                                    {% else %}badge-danger{% endif %}">
+                                    {{ session.get_status_display }}
+                                </span>
+                            </div>
+                            <div class="info-item">
+                                <strong>تاريخ الإنشاء:</strong>
+                                <span class="text-dark">{{ session.created_at|date:"Y/m/d H:i" }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if session.notes %}
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="info-item">
+                                <strong>ملاحظات:</strong>
+                                <p class="text-dark mt-2">{{ session.notes }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Current Candidate -->
+    {% if session.current_candidate %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user-clock"></i>
+                        المرشح الحالي
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-2 text-center">
+                            <img src="{{ session.current_candidate.get_profile_image_url }}"
+                                 alt="صورة المرشح"
+                                 class="rounded-circle"
+                                 style="width: 80px; height: 80px; object-fit: cover;">
+                        </div>
+                        <div class="col-md-6">
+                            <h5 class="text-dark mb-1">{{ session.current_candidate.student_name }}</h5>
+                            <p class="text-muted mb-0">{{ session.current_candidate.primary_qualification|default:"غير محدد" }}</p>
+                            <small class="text-muted">{{ session.current_candidate.university|default:"غير محدد" }}</small>
+                        </div>
+                        <div class="col-md-4 text-right">
+                            <a href="{% url 'students:candidate_detail' session.current_candidate.id %}"
+                               class="btn btn-info">
+                                <i class="fas fa-eye"></i> عرض ملف المرشح
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Session Controls -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-cogs text-primary"></i>
+                        التحكم في الجلسة
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="btn-toolbar" role="toolbar">
+                        {% if session.status == 'setup' %}
+                            <a href="{% url 'evaluation:session_start' session.id %}"
+                               class="btn btn-success me-2">
+                                <i class="fas fa-play"></i> بدء الجلسة
+                            </a>
+                        {% elif session.status == 'active' %}
+                            <a href="{% url 'evaluation:session_pause' session.id %}"
+                               class="btn btn-warning me-2">
+                                <i class="fas fa-pause"></i> إيقاف مؤقت
+                            </a>
+                            <a href="{% url 'evaluation:session_complete' session.id %}"
+                               class="btn btn-danger me-2"
+                               onclick="return confirm('هل أنت متأكد من إنهاء الجلسة؟')">
+                                <i class="fas fa-stop"></i> إنهاء الجلسة
+                            </a>
+                            <a href="{% url 'evaluation:next_candidate' session.id %}"
+                               class="btn btn-primary me-2">
+                                <i class="fas fa-forward"></i> المرشح التالي
+                            </a>
+                        {% elif session.status == 'paused' %}
+                            <a href="{% url 'evaluation:session_resume' session.id %}"
+                               class="btn btn-success me-2">
+                                <i class="fas fa-play"></i> استئناف الجلسة
+                            </a>
+                            <a href="{% url 'evaluation:session_complete' session.id %}"
+                               class="btn btn-danger me-2"
+                               onclick="return confirm('هل أنت متأكد من إنهاء الجلسة؟')">
+                                <i class="fas fa-stop"></i> إنهاء الجلسة
+                            </a>
+                        {% elif session.status == 'completed' %}
+                            <span class="badge badge-success badge-lg">
+                                <i class="fas fa-check-circle"></i> تم إنهاء الجلسة
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Candidate Selection -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-users text-primary"></i>
+                        اختيار المرشح للعرض على اللجنة
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if all_candidates %}
+                        <div class="row">
+                            {% for candidate in all_candidates %}
+                                <div class="col-md-6 col-lg-4 mb-3">
+                                    <div class="card candidate-card {% if session.current_candidate and session.current_candidate.id == candidate.id %}border-warning bg-light{% endif %}" data-candidate-id="{{ candidate.id }}">
+                                        <div class="card-body p-3">
+                                            <div class="d-flex align-items-center">
+                                                <img src="{{ candidate.get_profile_image_url }}"
+                                                     alt="صورة المرشح"
+                                                     class="rounded-circle me-3"
+                                                     style="width: 50px; height: 50px; object-fit: cover;">
+                                                <div class="flex-grow-1">
+                                                    <h6 class="card-title mb-1">{{ candidate.student_name }}</h6>
+                                                    <small class="text-muted d-block">{{ candidate.primary_qualification|default:"غير محدد" }}</small>
+                                                    <small class="text-muted">{{ candidate.university|default:"غير محدد" }}</small>
+                                                </div>
+                                            </div>
+                                            <div class="mt-3">
+                                                {% if session.current_candidate and session.current_candidate.id == candidate.id %}
+                                                    <span class="badge bg-warning text-dark">
+                                                        <i class="fas fa-star"></i> المرشح الحالي
+                                                    </span>
+                                                {% else %}
+                                                    <button class="btn btn-sm btn-outline-primary select-candidate"
+                                                            data-candidate-id="{{ candidate.id }}"
+                                                            data-session-id="{{ session.id }}">
+                                                        <i class="fas fa-hand-pointer"></i> اختيار
+                                                    </button>
+                                                {% endif %}
+                                                <a href="{% url 'students:candidate_detail' candidate.id %}"
+                                                   class="btn btn-sm btn-outline-info">
+                                                    <i class="fas fa-eye"></i> عرض
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-user-times fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">لا توجد مرشحين في هذه الخطة</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-primary">{{ session.total_candidates }}</h3>
+                    <p class="text-muted">إجمالي المرشحين</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-success">{{ session.evaluated_candidates_count }}</h3>
+                    <p class="text-muted">تم تقييمهم</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-warning">{{ session.progress_percentage }}%</h3>
+                    <p class="text-muted">نسبة الإنجاز</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Candidate Evaluations List -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list text-primary"></i>
+                        تقييمات المرشحين
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if evaluations %}
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>المرشح</th>
+                                        <th>المقيم</th>
+                                        <th>الدرجة</th>
+                                        <th>التوصية</th>
+                                        <th>الحالة</th>
+                                        <th>تاريخ التقييم</th>
+                                        <th>الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for evaluation in evaluations %}
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <img src="{{ evaluation.candidate.get_profile_image_url }}"
+                                                     alt="صورة المرشح"
+                                                     class="rounded-circle me-2"
+                                                     style="width: 40px; height: 40px; object-fit: cover;">
+                                                <span class="text-dark">{{ evaluation.candidate.student_name }}</span>
+                                            </div>
+                                        </td>
+                                        <td class="text-dark">{{ evaluation.evaluator.get_full_name|default:evaluation.evaluator.username }}</td>
+                                        <td>
+                                            {% if evaluation.total_score %}
+                                                <span class="badge badge-info">{{ evaluation.total_score }}/{{ evaluation.max_possible_score|default:100 }}</span>
+                                            {% else %}
+                                                <span class="text-muted">غير محدد</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if evaluation.recommendation %}
+                                                <span class="badge
+                                                    {% if evaluation.recommendation == 'accept' %}badge-success
+                                                    {% elif evaluation.recommendation == 'reject' %}badge-danger
+                                                    {% else %}badge-warning{% endif %}">
+                                                    {{ evaluation.get_recommendation_display }}
+                                                </span>
+                                            {% else %}
+                                                <span class="text-muted">غير محدد</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if evaluation.is_completed %}
+                                                <span class="badge badge-success">مكتمل</span>
+                                            {% else %}
+                                                <span class="badge badge-warning">جاري</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-dark">
+                                            {% if evaluation.end_time %}
+                                                {{ evaluation.end_time|date:"Y/m/d H:i" }}
+                                            {% else %}
+                                                {{ evaluation.start_time|date:"Y/m/d H:i" }}
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <a href="{% url 'evaluation:candidate_evaluate' evaluation.id %}"
+                                               class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye"></i> عرض
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">لا توجد تقييمات في هذه الجلسة بعد</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.info-item {
+    margin-bottom: 10px;
+}
+
+.info-item strong {
+    color: #495057;
+    margin-right: 8px;
+}
+
+.card {
+    border: 1px solid #dee2e6;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.badge-lg {
+    font-size: 1rem;
+    padding: 0.5rem 1rem;
+}
+
+.btn-toolbar .btn {
+    margin-right: 8px;
+    margin-bottom: 8px;
+}
+
+.table th {
+    border-top: none;
+    font-weight: 600;
+    color: #495057;
+}
+
+.text-dark {
+    color: #333 !important;
+}
+
+.me-2 {
+    margin-right: 0.5rem;
+}
+
+.text-right {
+    text-align: right;
+}
+
+.candidate-card {
+    transition: all 0.3s ease;
+    border: 1px solid #dee2e6;
+}
+
+.candidate-card:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+.candidate-card.border-warning {
+    border-color: #ffc107 !important;
+    box-shadow: 0 0 10px rgba(255, 193, 7, 0.3);
+}
+
+.select-candidate {
+    transition: all 0.3s ease;
+}
+
+.select-candidate:hover {
+    transform: scale(1.05);
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const sessionId = {{ session.id }};
+
+    // Handle candidate selection with super fast updates
+    document.querySelectorAll('.select-candidate').forEach(function(button) {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+
+            const candidateId = this.getAttribute('data-candidate-id');
+            const candidateCard = this.closest('.candidate-card');
+            const candidateName = candidateCard.querySelector('h6').textContent;
+
+            // INSTANT UI UPDATE - happens immediately
+            updateCurrentCandidate(candidateId, candidateName);
+            showMessage('تم اختيار ' + candidateName, 'success');
+
+            // Background save - fire and forget
+            const formData = new FormData();
+            formData.append('candidate_id', candidateId);
+            formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+
+            fetch(`/evaluation/examiner/session/${sessionId}/set-candidate/`, {
+                method: 'POST',
+                body: formData
+            });
+        });
+    });
+
+    function updateCurrentCandidate(candidateId, candidateName) {
+        // Fast DOM updates using cached queries
+        const allCards = document.querySelectorAll('.candidate-card');
+
+        allCards.forEach(function(card) {
+            const cardId = card.dataset.candidateId;
+            const buttonContainer = card.querySelector('.mt-3');
+
+            if (cardId === candidateId) {
+                // This is the new current candidate
+                card.classList.add('border-warning', 'bg-light');
+                buttonContainer.innerHTML = `
+                    <span class="badge bg-warning text-dark">
+                        <i class="fas fa-star"></i> المرشح الحالي
+                    </span>
+                    <a href="/students/candidate/${candidateId}/" class="btn btn-sm btn-outline-info">
+                        <i class="fas fa-eye"></i> عرض
+                    </a>
+                `;
+            } else {
+                // Remove current status from other candidates
+                card.classList.remove('border-warning', 'bg-light');
+                const badge = card.querySelector('.badge.bg-warning');
+                if (badge) {
+                    buttonContainer.innerHTML = `
+                        <button class="btn btn-sm btn-outline-primary select-candidate"
+                                data-candidate-id="${cardId}">
+                            <i class="fas fa-hand-pointer"></i> اختيار
+                        </button>
+                        <a href="/students/candidate/${cardId}/" class="btn btn-sm btn-outline-info">
+                            <i class="fas fa-eye"></i> عرض
+                        </a>
+                    `;
+                }
+            }
+        });
+
+        // Update current candidate section at top
+        updateCurrentCandidateDisplay(candidateId, candidateName);
+
+        // Re-attach event listeners efficiently
+        attachEventListeners();
+    }
+
+    function attachEventListeners() {
+        document.querySelectorAll('.select-candidate').forEach(function(button) {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+
+                const candidateId = this.getAttribute('data-candidate-id');
+                const candidateCard = this.closest('.candidate-card');
+                const candidateName = candidateCard.querySelector('h6').textContent;
+
+                updateCurrentCandidate(candidateId, candidateName);
+                showMessage('تم اختيار ' + candidateName, 'success');
+
+                const formData = new FormData();
+                formData.append('candidate_id', candidateId);
+                formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+
+                fetch(`/evaluation/examiner/session/${sessionId}/set-candidate/`, {
+                    method: 'POST',
+                    body: formData
+                });
+            });
+        });
+    }
+
+    function updateCurrentCandidateDisplay(candidateId, candidateName) {
+        // Find the current candidate section
+        const currentCandidateSection = document.querySelector('.border-warning');
+
+        if (currentCandidateSection) {
+            // Get candidate data from the selection area
+            const candidateCard = document.querySelector(`[data-candidate-id="${candidateId}"]`);
+            if (candidateCard) {
+                const candidateImg = candidateCard.querySelector('img').src;
+                const candidateQualification = candidateCard.querySelector('.text-muted').textContent;
+                const candidateUniversity = candidateCard.querySelectorAll('.text-muted')[1].textContent;
+
+                // Update the current candidate display
+                const cardBody = currentCandidateSection.querySelector('.card-body');
+                cardBody.innerHTML = `
+                    <div class="row align-items-center">
+                        <div class="col-md-2 text-center">
+                            <img src="${candidateImg}"
+                                 alt="صورة المرشح"
+                                 class="rounded-circle"
+                                 style="width: 80px; height: 80px; object-fit: cover;">
+                        </div>
+                        <div class="col-md-6">
+                            <h5 class="text-dark mb-1">${candidateName}</h5>
+                            <p class="text-muted mb-0">${candidateQualification}</p>
+                            <small class="text-muted">${candidateUniversity}</small>
+                        </div>
+                        <div class="col-md-4 text-right">
+                            <a href="/students/candidate/${candidateId}/"
+                               class="btn btn-info">
+                                <i class="fas fa-eye"></i> عرض ملف المرشح
+                            </a>
+                        </div>
+                    </div>
+                `;
+            }
+        } else {
+            // No current candidate section exists, create one
+            const sessionInfoCard = document.querySelector('.card');
+            if (sessionInfoCard) {
+                const candidateCard = document.querySelector(`[data-candidate-id="${candidateId}"]`);
+                if (candidateCard) {
+                    const candidateImg = candidateCard.querySelector('img').src;
+                    const candidateQualification = candidateCard.querySelector('.text-muted').textContent;
+                    const candidateUniversity = candidateCard.querySelectorAll('.text-muted')[1].textContent;
+
+                    const newCurrentCandidateSection = document.createElement('div');
+                    newCurrentCandidateSection.className = 'row mb-4';
+                    newCurrentCandidateSection.innerHTML = `
+                        <div class="col-12">
+                            <div class="card border-warning">
+                                <div class="card-header bg-warning text-dark">
+                                    <h5 class="mb-0">
+                                        <i class="fas fa-user-clock"></i>
+                                        المرشح الحالي
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-2 text-center">
+                                            <img src="${candidateImg}"
+                                                 alt="صورة المرشح"
+                                                 class="rounded-circle"
+                                                 style="width: 80px; height: 80px; object-fit: cover;">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <h5 class="text-dark mb-1">${candidateName}</h5>
+                                            <p class="text-muted mb-0">${candidateQualification}</p>
+                                            <small class="text-muted">${candidateUniversity}</small>
+                                        </div>
+                                        <div class="col-md-4 text-right">
+                                            <a href="/students/candidate/${candidateId}/"
+                                               class="btn btn-info">
+                                                <i class="fas fa-eye"></i> عرض ملف المرشح
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+
+                    // Insert after session info card
+                    sessionInfoCard.parentNode.parentNode.insertAdjacentElement('afterend', newCurrentCandidateSection);
+                }
+            }
+        }
+    }
+
+    function showMessage(message, type) {
+        // Create message div
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show`;
+        messageDiv.style.position = 'fixed';
+        messageDiv.style.top = '20px';
+        messageDiv.style.right = '20px';
+        messageDiv.style.zIndex = '9999';
+        messageDiv.style.minWidth = '300px';
+
+        messageDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+
+        document.body.appendChild(messageDiv);
+
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            if (messageDiv.parentNode) {
+                messageDiv.remove();
+            }
+        }, 5000);
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+
+{% block title %}Home - MyProject{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="hero-section">
+        <h1>Welcome to MyProject</h1>
+        <p>Your comprehensive management system</p>
+        {% if user.is_authenticated %}
+            <h2>Hello, {{ user.username }}!</h2>
+        {% else %}
+            <a href="{% url 'login' %}" class="btn btn-primary">Get Started</a>
+        {% endif %}
+    </div>
+
+    <div class="features">
+        <div class="feature-card">
+            <h3>Accounts</h3>
+            <p>Manage user accounts and profiles</p>
+            <a href="#" class="btn btn-secondary">Learn More</a>
+        </div>
+
+        <div class="feature-card">
+            <h3>Doctor</h3>
+            <p>Doctor management system</p>
+            <a href="#" class="btn btn-secondary">Learn More</a>
+        </div>
+
+        <div class="feature-card">
+            <h3>Students</h3>
+            <p>Student information system</p>
+            <a href="#" class="btn btn-secondary">Learn More</a>
+        </div>
+
+        <div class="feature-card">
+            <h3>Examinations</h3>
+            <p>Examination management</p>
+            <a href="#" class="btn btn-secondary">Learn More</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

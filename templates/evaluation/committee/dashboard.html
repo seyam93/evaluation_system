@@ -1,0 +1,1336 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}لوحة تحكم اللجنة{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Welcome Header -->
+    <div class="welcome-section text-center mb-4">
+        <div class="user-name">{{ user.get_full_name|default:user.username }}</div>
+    </div>
+
+    {% if active_sessions %}
+        {% for session in active_sessions %}
+        <!-- Session Info Header -->
+        <div class="session-header mb-4">
+            <div class="session-info">
+                <h2 class="session-title">{{ session.plan.title }}</h2>
+                <p class="session-details">{{ session.plan.department }} - {{ session.session_date }}</p>
+            </div>
+            <div class="session-status">
+                <button class="status-badge active candidates-modal-btn" onclick="showCandidatesModal({{ session.plan.id }})">
+                    <i class="fas fa-users"></i> عرض جميع المرشحين
+                </button>
+                <div class="progress-info">
+                </div>
+            </div>
+        </div>
+
+        <!-- Current Candidate Details -->
+        {% if session.current_candidate %}
+        <div class="candidate-section">
+            <div class="candidate-card-compact">
+                <!-- Image on the LEFT side of the card -->
+                <div class="candidate-photo-left">
+                    <img src="{{ session.current_candidate.get_profile_image_url }}" alt="صورة المرشح" class="candidate-image">
+                </div>
+
+                <!-- Information on the RIGHT side -->
+                <div class="candidate-info-right">
+                    <!-- Name and Basic Info -->
+                    <div class="candidate-header-info">
+                        <h2 class="candidate-name-compact">{{ session.current_candidate.student_name }}</h2>
+                        <div class="basic-info-row">
+                            {% if session.current_candidate.age %}<span class="info-item">{{ session.current_candidate.age }} سنة</span>{% endif %}
+                            {% if session.current_candidate.gender %}<span class="info-item">{% if session.current_candidate.gender == 'Male' %}ذكر{% else %}أنثى{% endif %}</span>{% endif %}
+                            {% if session.current_candidate.marital_status %}<span class="info-item">{% if session.current_candidate.marital_status == 'single' %}أعزب{% else %}متزوج{% endif %}</span>{% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Three Column Layout -->
+                    <div class="info-columns">
+                        <!-- Column 1: Personal & Contact -->
+                        <div class="info-column">
+                            <h4 class="column-title"><i class="fas fa-user"></i> معلومات شخصية</h4>
+                            <div class="info-list">
+                                {% if session.current_candidate.birth_date %}
+                                <div class="info-row">
+                                    <span class="info-label">تاريخ الميلاد:</span>
+                                    <span class="info-value">{{ session.current_candidate.birth_date|date:"d/m/Y" }}</span>
+                                </div>
+                                {% endif %}
+                                {% if session.current_candidate.phone_number %}
+                                <div class="info-row">
+                                    <span class="info-label">الهاتف:</span>
+                                    <span class="info-value">{{ session.current_candidate.phone_number }}</span>
+                                </div>
+                                {% endif %}
+                                {% if session.current_candidate.email %}
+                                <div class="info-row">
+                                    <span class="info-label">الإيميل:</span>
+                                    <span class="info-value">{{ session.current_candidate.email }}</span>
+                                </div>
+                                {% endif %}
+                                {% if session.current_candidate.address %}
+                                <div class="info-row">
+                                    <span class="info-label">العنوان:</span>
+                                    <span class="info-value">{{ session.current_candidate.address|truncatechars:30 }}</span>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Column 2: Education & Qualifications -->
+                        <div class="info-column">
+                            <h4 class="column-title"><i class="fas fa-graduation-cap"></i> المؤهلات</h4>
+                            <div class="info-list">
+                                {% if session.current_candidate.primary_qualification %}
+                                <div class="info-row">
+                                    <span class="info-label">المؤهل الأساسي:</span>
+                                    <span class="info-value">{{ session.current_candidate.primary_qualification }}</span>
+                                </div>
+                                {% endif %}
+                                {% if session.current_candidate.university %}
+                                <div class="info-row">
+                                    <span class="info-label">الجامعة:</span>
+                                    <span class="info-value">{{ session.current_candidate.university }}</span>
+                                </div>
+                                {% endif %}
+                                {% if session.current_candidate.general_degree %}
+                                <div class="info-row">
+                                    <span class="info-label">التقدير:</span>
+                                    <span class="info-value">{{ session.current_candidate.general_degree }}</span>
+                                </div>
+                                {% endif %}
+                                {% if session.current_candidate.graduation_year %}
+                                <div class="info-row">
+                                    <span class="info-label">سنة التخرج:</span>
+                                    <span class="info-value">{{ session.current_candidate.graduation_year }}</span>
+                                </div>
+                                {% endif %}
+
+                                <!-- Additional Qualifications -->
+                                {% if session.current_candidate.qualifications.all %}
+                                <div class="sub-section">
+                                    <span class="sub-title">مؤهلات أخرى:</span>
+                                    {% for qual in session.current_candidate.qualifications.all %}
+                                    <div class="sub-item">
+                                        {{ qual.degree_name }}
+                                        {% if qual.degree_date %} ({{ qual.degree_date.year }}){% endif %}
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Column 3: Experience & Test Results -->
+                        <div class="info-column">
+                            <h4 class="column-title"><i class="fas fa-briefcase"></i> الخبرات والنتائج</h4>
+                            <div class="info-list">
+                                <!-- Experience -->
+                                {% if session.current_candidate.experiences.all %}
+                                <div class="sub-section">
+                                    <span class="sub-title">الخبرات العملية:</span>
+                                    {% for exp in session.current_candidate.experiences.all|slice:":3" %}
+                                    <div class="sub-item">
+                                        <strong>{{ exp.job_title }}</strong>
+                                        {% if exp.company_name %}<br><small>{{ exp.company_name }}</small>{% endif %}
+                                        {% if exp.start_date %}
+                                        <br><small class="date-range">
+                                            {{ exp.start_date|date:"Y/m" }} -
+                                            {% if exp.end_date %}{{ exp.end_date|date:"Y/m" }}{% else %}حتى الآن{% endif %}
+                                        </small>
+                                        {% endif %}
+                                        {% if exp.duration_years %}<br><small>{{ exp.duration_years|floatformat:1 }} سنة</small>{% endif %}
+                                    </div>
+                                    {% endfor %}
+                                    {% if session.current_candidate.experiences.all.count > 3 %}
+                                    <div class="sub-item"><small>...و {{ session.current_candidate.experiences.all.count|add:"-3" }} خبرات أخرى</small></div>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+
+                                <!-- Test Results -->
+                                {% if session.current_candidate.test_results.all %}
+                                <div class="sub-section">
+                                    <span class="sub-title">نتائج الاختبارات:</span>
+                                    {% for test in session.current_candidate.test_results.all %}
+                                    <div class="test-result">
+                                        <span class="test-name">{{ test.test_category.name }}:</span>
+                                        <span class="test-score grade-{{ test.grade|lower }}">{{ test.score }}/{{ test.max_possible_score }} ({{ test.percentage_score }}%)</span>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Evaluation Button -->
+                    <div class="evaluation-action-compact">
+                        <a href="{% url 'evaluation:committee_current_candidate' %}" class="btn-evaluate-compact">
+                            <i class="fas fa-clipboard-check"></i>
+                            <span>بدء التقييم</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <!-- No Current Candidate -->
+        <div class="no-candidate-section">
+            <div class="no-candidate-icon">
+                <i class="fas fa-hourglass-half"></i>
+            </div>
+            <div class="no-candidate-text">
+                <h3>في انتظار اختيار المرشح</h3>
+                <p>سيقوم المشرف باختيار المرشح التالي قريباً</p>
+            </div>
+        </div>
+        {% endif %}
+        {% endfor %}
+
+    {% else %}
+        <!-- No Active Sessions -->
+        <div class="no-session-card">
+            <div class="no-session-icon">
+                <i class="fas fa-pause-circle"></i>
+            </div>
+            <div class="no-session-content">
+                <h2>لا توجد جلسات تقييم نشطة</h2>
+                <p>ستظهر الجلسات النشطة هنا عند بدئها من قبل المشرف</p>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Candidates Modal -->
+<div class="modal fade" id="candidatesModal" tabindex="-1" aria-labelledby="candidatesModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="candidatesModalLabel">
+                    <i class="fas fa-users text-primary"></i>
+                    جميع مرشحي الخطة
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+            </div>
+            <div class="modal-body">
+                <div id="candidatesContainer">
+                    <div class="d-flex justify-content-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">جاري التحميل...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Candidate Detail Modal -->
+<div class="modal fade" id="candidateDetailModal" tabindex="-1" aria-labelledby="candidateDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="candidateDetailModalLabel">
+                    <i class="fas fa-user text-primary"></i>
+                    تفاصيل المرشح
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+            </div>
+            <div class="modal-body">
+                <div id="candidateDetailContainer">
+                    <!-- Candidate detail content will be loaded here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Smooth Content Update Script -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let isUpdating = false;
+
+    // Smooth content update every 3 seconds
+    setInterval(function() {
+        updateContent();
+    }, 3000);
+
+    function updateContent() {
+        if (isUpdating) return;
+        isUpdating = true;
+
+        fetch(window.location.href, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.text())
+        .then(html => {
+            const parser = new DOMParser();
+            const newDoc = parser.parseFromString(html, 'text/html');
+            const newContainer = newDoc.querySelector('.container');
+            const currentContainer = document.querySelector('.container');
+
+            if (newContainer && currentContainer) {
+                // Update content directly without opacity transitions to prevent blinking
+                currentContainer.innerHTML = newContainer.innerHTML;
+                showUpdateIndicator();
+                isUpdating = false;
+            } else {
+                isUpdating = false;
+            }
+        })
+        .catch(error => {
+            console.log('Content update failed:', error);
+            isUpdating = false;
+        });
+    }
+
+    function showUpdateIndicator() {
+        const indicator = document.createElement('div');
+        indicator.style.cssText = `
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            width: 8px;
+            height: 8px;
+            background: #059669;
+            border-radius: 50%;
+            z-index: 9999;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        `;
+
+        document.body.appendChild(indicator);
+
+        setTimeout(() => {
+            indicator.style.opacity = '0.8';
+        }, 50);
+
+        setTimeout(() => {
+            indicator.style.opacity = '0';
+        }, 800);
+
+        setTimeout(() => {
+            indicator.remove();
+        }, 1100);
+    }
+});
+
+// Candidates Modal Functions
+function showCandidatesModal(planId) {
+    const modal = new bootstrap.Modal(document.getElementById('candidatesModal'));
+    const candidatesContainer = document.getElementById('candidatesContainer');
+
+    // Show loading spinner
+    candidatesContainer.innerHTML = `
+        <div class="d-flex justify-content-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">جاري التحميل...</span>
+            </div>
+        </div>
+    `;
+
+    // Show modal
+    modal.show();
+
+    // Fetch candidates
+    fetch(`/evaluation/ajax/get-plan-candidates/?plan_id=${planId}`, {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            displayCandidates(data.candidates, data.plan_title);
+        } else {
+            candidatesContainer.innerHTML = `
+                <div class="alert alert-danger text-center">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    ${data.message}
+                </div>
+            `;
+        }
+    })
+    .catch(error => {
+        candidatesContainer.innerHTML = `
+            <div class="alert alert-danger text-center">
+                <i class="fas fa-exclamation-triangle"></i>
+                خطأ في تحميل البيانات
+            </div>
+        `;
+        console.error('Error:', error);
+    });
+}
+
+function displayCandidates(candidates, planTitle) {
+    const candidatesContainer = document.getElementById('candidatesContainer');
+
+    if (candidates.length === 0) {
+        candidatesContainer.innerHTML = `
+            <div class="alert alert-info text-center">
+                <i class="fas fa-info-circle"></i>
+                لا يوجد مرشحون مسجلون في هذه الخطة
+            </div>
+        `;
+        return;
+    }
+
+    // Update modal title
+    document.getElementById('candidatesModalLabel').innerHTML = `
+        <i class="fas fa-users text-primary"></i>
+        مرشحو خطة: ${planTitle}
+    `;
+
+    let candidatesHTML = `
+        <div class="row g-3">
+    `;
+
+    candidates.forEach(candidate => {
+        candidatesHTML += `
+            <div class="col-md-6 col-lg-4">
+                <div class="candidate-card-modal clickable-card" onclick="showCandidateDetail(${candidate.id})" style="cursor: pointer;">
+                    <div class="candidate-header">
+                        <h6 class="candidate-name">${candidate.student_name}</h6>
+                        <div class="candidate-basics">
+                            ${candidate.age ? `<span class="badge bg-light text-dark">${candidate.age} سنة</span>` : ''}
+                            ${candidate.gender ? `<span class="badge bg-light text-dark">${candidate.gender === 'Male' ? 'ذكر' : 'أنثى'}</span>` : ''}
+                        </div>
+                    </div>
+                    <div class="candidate-details">
+                        ${candidate.primary_qualification ? `
+                            <div class="detail-item">
+                                <i class="fas fa-graduation-cap text-primary"></i>
+                                <span>${candidate.primary_qualification}</span>
+                            </div>
+                        ` : ''}
+                        ${candidate.university ? `
+                            <div class="detail-item">
+                                <i class="fas fa-university text-info"></i>
+                                <span>${candidate.university}</span>
+                            </div>
+                        ` : ''}
+                        ${candidate.phone_number ? `
+                            <div class="detail-item">
+                                <i class="fas fa-phone text-success"></i>
+                                <span>${candidate.phone_number}</span>
+                            </div>
+                        ` : ''}
+                        ${candidate.email ? `
+                            <div class="detail-item">
+                                <i class="fas fa-envelope text-warning"></i>
+                                <span>${candidate.email}</span>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+
+    candidatesHTML += `
+        </div>
+        <div class="mt-3 text-center">
+            <div class="badge bg-primary fs-6">
+                إجمالي المرشحين: ${candidates.length}
+            </div>
+        </div>
+    `;
+
+    candidatesContainer.innerHTML = candidatesHTML;
+}
+
+// Show candidate detail modal
+function showCandidateDetail(candidateId) {
+    const modal = new bootstrap.Modal(document.getElementById('candidateDetailModal'));
+    const detailContainer = document.getElementById('candidateDetailContainer');
+
+    // Show loading spinner
+    detailContainer.innerHTML = `
+        <div class="d-flex justify-content-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">جاري التحميل...</span>
+            </div>
+        </div>
+    `;
+
+    // Show modal
+    modal.show();
+
+    // Fetch candidate details
+    fetch(`/evaluation/ajax/get-candidate-details/?candidate_id=${candidateId}`, {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            displayCandidateDetail(data.candidate);
+        } else {
+            detailContainer.innerHTML = `
+                <div class="alert alert-danger text-center">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    ${data.error || 'حدث خطأ في تحميل بيانات المرشح'}
+                </div>
+            `;
+        }
+    })
+    .catch(error => {
+        console.error('Error fetching candidate details:', error);
+        detailContainer.innerHTML = `
+            <div class="alert alert-danger text-center">
+                <i class="fas fa-exclamation-triangle"></i>
+                حدث خطأ في الاتصال
+            </div>
+        `;
+    });
+}
+
+// Display candidate detail in modal
+function displayCandidateDetail(candidate) {
+    const detailContainer = document.getElementById('candidateDetailContainer');
+
+    // Update modal title
+    document.getElementById('candidateDetailModalLabel').innerHTML = `
+        <i class="fas fa-user text-primary"></i>
+        ${candidate.student_name}
+    `;
+
+    // Create candidate detail HTML using the same structure as the main dashboard
+    const candidateHTML = `
+        <div class="candidate-section">
+            <div class="candidate-card-compact">
+                <!-- Image on the LEFT side of the card -->
+                <div class="candidate-photo-left">
+                    <img src="${candidate.profile_image_url || '/static/images/profile.png'}" alt="صورة المرشح" class="candidate-image">
+                </div>
+
+                <!-- Information on the RIGHT side -->
+                <div class="candidate-info-right">
+                    <!-- Name and Basic Info -->
+                    <div class="candidate-header-info">
+                        <h2 class="candidate-name-compact">${candidate.student_name}</h2>
+                        <div class="basic-info-row">
+                            ${candidate.age ? `<span class="info-item">${candidate.age} سنة</span>` : ''}
+                            ${candidate.gender ? `<span class="info-item">${candidate.gender === 'Male' ? 'ذكر' : 'أنثى'}</span>` : ''}
+                            ${candidate.marital_status ? `<span class="info-item">${candidate.marital_status === 'single' ? 'أعزب' : 'متزوج'}</span>` : ''}
+                        </div>
+                    </div>
+
+                    <!-- Three Column Layout -->
+                    <div class="info-columns">
+                        <!-- Column 1: Personal & Contact -->
+                        <div class="info-column">
+                            <h4 class="column-title"><i class="fas fa-user"></i> معلومات شخصية</h4>
+                            <div class="info-list">
+                                ${candidate.birth_date ? `
+                                <div class="info-row">
+                                    <span class="info-label">تاريخ الميلاد:</span>
+                                    <span class="info-value">${candidate.birth_date}</span>
+                                </div>
+                                ` : ''}
+                                ${candidate.phone_number ? `
+                                <div class="info-row">
+                                    <span class="info-label">الهاتف:</span>
+                                    <span class="info-value">${candidate.phone_number}</span>
+                                </div>
+                                ` : ''}
+                                ${candidate.email ? `
+                                <div class="info-row">
+                                    <span class="info-label">الإيميل:</span>
+                                    <span class="info-value">${candidate.email}</span>
+                                </div>
+                                ` : ''}
+                                ${candidate.address ? `
+                                <div class="info-row">
+                                    <span class="info-label">العنوان:</span>
+                                    <span class="info-value">${candidate.address}</span>
+                                </div>
+                                ` : ''}
+                            </div>
+                        </div>
+
+                        <!-- Column 2: Education -->
+                        <div class="info-column">
+                            <h4 class="column-title"><i class="fas fa-graduation-cap"></i> المؤهلات العلمية</h4>
+                            <div class="info-list">
+                                ${candidate.primary_qualification ? `
+                                <div class="info-row">
+                                    <span class="info-label">المؤهل الأساسي:</span>
+                                    <span class="info-value">${candidate.primary_qualification}</span>
+                                </div>
+                                ` : ''}
+                                ${candidate.university ? `
+                                <div class="info-row">
+                                    <span class="info-label">الجامعة:</span>
+                                    <span class="info-value">${candidate.university}</span>
+                                </div>
+                                ` : ''}
+                                ${candidate.general_degree ? `
+                                <div class="info-row">
+                                    <span class="info-label">التقدير العام:</span>
+                                    <span class="info-value">${candidate.general_degree}</span>
+                                </div>
+                                ` : ''}
+                                ${candidate.graduation_year ? `
+                                <div class="info-row">
+                                    <span class="info-label">سنة التخرج:</span>
+                                    <span class="info-value">${candidate.graduation_year}</span>
+                                </div>
+                                ` : ''}
+                            </div>
+                        </div>
+
+                        <!-- Column 3: Additional Info -->
+                        <div class="info-column">
+                            <h4 class="column-title"><i class="fas fa-info-circle"></i> معلومات إضافية</h4>
+                            <div class="info-list">
+                                ${candidate.number_of_children !== undefined ? `
+                                <div class="info-row">
+                                    <span class="info-label">عدد الأطفال:</span>
+                                    <span class="info-value">${candidate.number_of_children}</span>
+                                </div>
+                                ` : ''}
+                                ${candidate.application_date ? `
+                                <div class="info-row">
+                                    <span class="info-label">تاريخ التقديم:</span>
+                                    <span class="info-value">${candidate.application_date}</span>
+                                </div>
+                                ` : ''}
+                                ${candidate.application_status ? `
+                                <div class="info-row">
+                                    <span class="info-label">حالة التقديم:</span>
+                                    <span class="info-value">${candidate.application_status}</span>
+                                </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    detailContainer.innerHTML = candidateHTML;
+}
+</script>
+
+<style>
+:root {
+    /* Harmonized Blue Color Palette */
+    --primary-color: #1d4ed8;
+    --secondary-color: #2563eb;
+    --success-color: #059669;
+    --warning-color: #ca8a04;
+    --danger-color: #dc2626;
+    --info-color: #0284c7;
+    --accent-color: #3b82f6;
+    --dark-color: #1e3a8a;
+    --light-color: #eff6ff;
+    --text-primary: #1e3a8a;
+    --text-secondary: #475569;
+    --text-light: #64748b;
+    --border-color: #dbeafe;
+    --shadow-light: 0 4px 6px -1px rgba(29, 78, 216, 0.1);
+    --shadow-medium: 0 10px 15px -3px rgba(29, 78, 216, 0.1);
+    --current-highlight: #f0f9ff;
+}
+
+body {
+    background: linear-gradient(135deg, var(--light-color) 0%, #f8fafc 100%);
+    min-height: 100vh;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: var(--text-primary);
+}
+
+.container {
+    max-width: 1200px;
+}
+
+/* Welcome Section */
+.welcome-section {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    color: white;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: var(--shadow-medium);
+}
+
+.user-name {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 5px;
+}
+
+.user-role {
+    font-size: 1.1rem;
+    opacity: 0.9;
+    margin: 0;
+}
+
+/* Session Header */
+.session-header {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    color: white;
+    padding: 25px;
+    border-radius: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: var(--shadow-medium);
+}
+
+.session-title {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin: 0;
+    color: white;
+}
+
+.session-details {
+    margin: 5px 0 0 0;
+    opacity: 0.9;
+    font-size: 1rem;
+}
+
+.status-badge {
+    background: rgba(255,255,255,0.25);
+    padding: 8px 15px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+    display: block;
+}
+
+.candidates-modal-btn {
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    color: white;
+    text-decoration: none;
+}
+
+.candidates-modal-btn:hover {
+    background: rgba(255,255,255,0.35);
+    transform: translateY(-1px);
+    color: white;
+    text-decoration: none;
+}
+
+.candidates-modal-btn i {
+    font-size: 0.8rem;
+}
+
+.progress-numbers {
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+/* Compact Candidate Section */
+.candidate-section {
+    margin-bottom: 30px;
+}
+
+.candidate-card-compact {
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    border-radius: 20px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+    display: flex;
+    flex-direction: row; /* Explicitly set row direction: left to right */
+    direction: ltr; /* Override RTL to ensure left-to-right layout */
+    min-height: 300px;
+    border: 1px solid rgba(59, 130, 246, 0.1);
+}
+
+/* LEFT Side - Photo (First element in flex row) */
+.candidate-photo-left {
+    width: 200px;
+    background: linear-gradient(135deg, var(--accent-color) 0%, var(--primary-color) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    order: 1; /* Ensure it's the first element */
+}
+
+.candidate-image {
+    width: 160px;
+    height: 200px;
+    object-fit: cover;
+    /* No border-radius = no circle, just rectangular image */
+    /* No border = no frame around the image */
+}
+
+/* RIGHT Side - Information (Second element in flex row) */
+.candidate-info-right {
+    flex: 1;
+    padding: 25px 30px;
+    display: flex;
+    flex-direction: column;
+    order: 2; /* Ensure it's the second element */
+    direction: rtl; /* Restore RTL for Arabic text */
+}
+
+/* Header Info */
+.candidate-header-info {
+    margin-bottom: 20px;
+    border-bottom: 2px solid rgba(59, 130, 246, 0.2);
+    padding-bottom: 15px;
+}
+
+.candidate-name-compact {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 8px 0;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.basic-info-row {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.info-item {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(147, 197, 253, 0.1) 100%);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--primary-color);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.1);
+}
+
+/* Three Column Layout */
+.info-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 25px;
+    flex: 1;
+    margin-bottom: 20px;
+}
+
+.info-column {
+    display: flex;
+    flex-direction: column;
+}
+
+.column-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin: 0 0 12px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #1f2937;
+}
+
+.column-title i {
+    font-size: 0.9rem;
+}
+
+.info-list {
+    flex: 1;
+    font-size: 0.85rem;
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(59, 130, 246, 0.1);
+}
+
+.info-row:last-child {
+    border-bottom: none;
+}
+
+.info-label {
+    font-weight: 600;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+    margin-left: 10px;
+    font-size: 0.8rem;
+}
+
+.info-value {
+    color: var(--text-primary);
+    font-weight: 500;
+    text-align: right;
+    word-break: break-word;
+    font-size: 0.85rem;
+}
+
+/* Sub-sections for qualifications, experiences, tests */
+.sub-section {
+    margin-top: 12px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(59, 130, 246, 0.1);
+}
+
+.sub-title {
+    font-weight: 600;
+    color: #1f2937;
+    font-size: 0.75rem;
+    display: block;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.sub-item {
+    font-size: 0.8rem;
+    margin-bottom: 6px;
+    color: var(--text-primary);
+    line-height: 1.3;
+}
+
+.sub-item:last-child {
+    margin-bottom: 0;
+}
+
+/* Date range styling for experiences */
+.date-range {
+    color: var(--accent-color);
+    font-weight: 600;
+    font-style: italic;
+}
+
+/* Test Results Styling */
+.test-result {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+    padding: 6px 10px;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(147, 197, 253, 0.05) 100%);
+    border-radius: 8px;
+    font-size: 0.8rem;
+    border: 1px solid rgba(59, 130, 246, 0.1);
+    box-shadow: 0 1px 3px rgba(59, 130, 246, 0.1);
+}
+
+.test-name {
+    font-weight: 600;
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+}
+
+.test-score {
+    font-weight: 700;
+    font-size: 0.8rem;
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+.grade-a { background: #dcfce7; color: #166534; }
+.grade-b { background: #dbeafe; color: #1d4ed8; }
+.grade-c { background: #fef3c7; color: #d97706; }
+.grade-d { background: #fed7aa; color: #ea580c; }
+.grade-f { background: #fecaca; color: #dc2626; }
+
+/* Compact Evaluation Button */
+.evaluation-action-compact {
+    text-align: center;
+    padding-top: 15px;
+    border-top: 2px solid rgba(59, 130, 246, 0.2);
+}
+
+.btn-evaluate-compact {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 25px;
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+    text-decoration: none;
+    border-radius: 25px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+    transition: all 0.3s ease;
+}
+
+.btn-evaluate-compact:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+}
+
+.btn-evaluate-compact i {
+    font-size: 1rem;
+}
+
+/* No Candidate Section */
+.no-candidate-section {
+    background: white;
+    border-radius: 20px;
+    padding: 80px 40px;
+    text-align: center;
+    box-shadow: var(--shadow-medium);
+    border: 1px solid var(--border-color);
+}
+
+.no-candidate-icon i {
+    font-size: 5rem;
+    color: var(--info-color);
+    margin-bottom: 30px;
+    opacity: 0.8;
+}
+
+.no-candidate-text h3 {
+    color: var(--text-primary);
+    margin-bottom: 15px;
+    font-weight: 700;
+    font-size: 1.8rem;
+}
+
+.no-candidate-text p {
+    color: var(--text-secondary);
+    font-size: 1.2rem;
+    margin: 0;
+}
+
+/* Evaluate Button */
+.btn-evaluate {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 25px;
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+    text-decoration: none;
+    border-radius: 15px;
+    font-weight: 700;
+    box-shadow: 0 6px 15px rgba(239, 68, 68, 0.3);
+    margin-right: 20px;
+}
+
+.btn-evaluate i {
+    font-size: 1.8rem;
+    margin-bottom: 8px;
+}
+.btn-evaluate span {
+    font-size: 1rem;
+}
+
+/* No Session Card */
+.no-session-card {
+    background: white;
+    border-radius: 20px;
+    padding: 60px;
+    text-align: center;
+    box-shadow: var(--shadow-medium);
+    border: 1px solid var(--border-color);
+}
+
+/* Candidates Modal Styles */
+.candidate-card-modal {
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    border: 1px solid rgba(59, 130, 246, 0.15);
+    border-radius: 12px;
+    padding: 15px;
+    height: 100%;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.candidate-card-modal:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.15);
+    border-color: rgba(59, 130, 246, 0.3);
+}
+
+.candidate-card-modal.clickable-card {
+    cursor: pointer;
+    position: relative;
+}
+
+.candidate-card-modal.clickable-card:hover {
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    border-color: rgba(59, 130, 246, 0.5);
+    transform: translateY(-3px);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.candidate-card-modal.clickable-card:hover::after {
+    content: "اضغط للعرض";
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(59, 130, 246, 0.9);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    opacity: 0.8;
+}
+
+.candidate-header {
+    border-bottom: 2px solid rgba(59, 130, 246, 0.1);
+    padding-bottom: 10px;
+    margin-bottom: 12px;
+}
+
+.candidate-name {
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 8px 0;
+    font-size: 1rem;
+    text-align: center;
+}
+
+.candidate-basics {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.candidate-basics .badge {
+    font-size: 0.75rem;
+    padding: 4px 8px;
+}
+
+.candidate-details {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.detail-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.detail-item i {
+    width: 16px;
+    text-align: center;
+    font-size: 0.8rem;
+}
+
+.detail-item span {
+    flex: 1;
+    word-break: break-word;
+    line-height: 1.3;
+}
+
+/* Modal customizations */
+.modal-header {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    color: white;
+    border-bottom: none;
+}
+
+.modal-header .btn-close {
+    filter: invert(1);
+}
+
+.modal-title {
+    font-weight: 700;
+}
+
+.modal-body {
+    padding: 20px;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.modal-footer {
+    border-top: 1px solid rgba(59, 130, 246, 0.2);
+    background: #f8fafc;
+}
+
+.no-session-icon i {
+    font-size: 4rem;
+    color: var(--info-color);
+    margin-bottom: 25px;
+    opacity: 0.8;
+}
+
+.no-session-content h2 {
+    color: var(--text-primary);
+    margin-bottom: 15px;
+    font-weight: 700;
+    font-size: 1.6rem;
+}
+
+.no-session-content p {
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+    margin: 0;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .container {
+        padding: 10px;
+    }
+
+    .session-header {
+        flex-direction: column;
+        text-align: center;
+        gap: 15px;
+        padding: 20px;
+    }
+
+    .session-title {
+        font-size: 1.4rem;
+    }
+
+    /* Compact Candidate Card - Mobile */
+    .candidate-card-compact {
+        flex-direction: column;
+        min-height: auto;
+    }
+
+    .candidate-photo-left {
+        width: 100%;
+        height: 150px;
+        background: linear-gradient(90deg, var(--accent-color) 0%, var(--primary-color) 100%);
+    }
+
+    .candidate-image {
+        width: 120px;
+        height: 120px;
+        border-radius: 10px;
+    }
+
+    .candidate-info-right {
+        padding: 20px;
+    }
+
+    .candidate-name-compact {
+        font-size: 1.5rem;
+        text-align: center;
+    }
+
+    .basic-info-row {
+        justify-content: center;
+        gap: 10px;
+    }
+
+    .info-item {
+        font-size: 0.8rem;
+        padding: 3px 8px;
+    }
+
+    /* Single Column Layout on Mobile */
+    .info-columns {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .column-title {
+        font-size: 0.9rem;
+    }
+
+    .info-row {
+        flex-direction: column;
+        gap: 2px;
+        padding: 6px 0;
+    }
+
+    .info-label {
+        margin-left: 0;
+        font-size: 0.75rem;
+    }
+
+    .info-value {
+        text-align: left;
+        font-size: 0.8rem;
+    }
+
+    .sub-title {
+        font-size: 0.7rem;
+    }
+
+    .sub-item {
+        font-size: 0.75rem;
+    }
+
+    .test-result {
+        flex-direction: column;
+        gap: 4px;
+        text-align: center;
+        padding: 6px;
+    }
+
+    .test-name,
+    .test-score {
+        font-size: 0.75rem;
+    }
+
+    .btn-evaluate-compact {
+        padding: 10px 20px;
+        font-size: 0.9rem;
+        gap: 8px;
+    }
+
+    .no-candidate-section {
+        padding: 40px 20px;
+    }
+
+    .no-candidate-icon i {
+        font-size: 3rem;
+    }
+
+    .no-candidate-text h3 {
+        font-size: 1.3rem;
+    }
+
+    .no-candidate-text p {
+        font-size: 1rem;
+    }
+}
+
+/* Medium screens */
+@media (max-width: 1024px) and (min-width: 769px) {
+    .info-columns {
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+    }
+
+    .info-column:last-child {
+        grid-column: 1 / -1;
+    }
+
+    .candidate-image {
+        width: 140px;
+        height: 180px;
+    }
+
+    .candidate-photo-left {
+        width: 180px;
+    }
+}
+</style>
+{% endblock %}

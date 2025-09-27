@@ -1,0 +1,379 @@
+{% extends 'base.html' %}
+
+{% block title %}Admin Dashboard - Recruitment System{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="dashboard-header">
+        <h1>Admin Dashboard</h1>
+        <p>Welcome back, {{ user.get_full_name|default:user.username }}!</p>
+        <p class="user-role">System Administrator</p>
+    </div>
+
+    <div class="dashboard-stats">
+        <div class="stat-card">
+            <h3>Total Candidates</h3>
+            <span class="stat-number">{{ total_candidates }}</span>
+            <a href="{% url 'students:candidate_list' %}" class="stat-link">Manage Candidates</a>
+        </div>
+
+        <div class="stat-card">
+            <h3>Recruitment Plans</h3>
+            <span class="stat-number">{{ total_plans }}</span>
+            <a href="{% url 'students:plan_list' %}" class="stat-link">Manage Plans</a>
+        </div>
+
+        <div class="stat-card">
+            <h3>Active Plans</h3>
+            <span class="stat-number">{{ active_plans }}</span>
+            <a href="{% url 'students:plan_list' %}?status=active" class="stat-link">View Active</a>
+        </div>
+
+        <div class="stat-card">
+            <h3>Inactive Plans</h3>
+            <span class="stat-number">{{ inactive_plans }}</span>
+            <a href="{% url 'students:plan_list' %}?status=inactive" class="stat-link">View Inactive</a>
+        </div>
+
+        <div class="stat-card">
+            <h3>Total Users</h3>
+            <span class="stat-number">{{ total_users }}</span>
+            <a href="{% url 'accounts:user_management' %}" class="stat-link">Manage Users</a>
+        </div>
+
+        <div class="stat-card">
+            <h3>Committee Members</h3>
+            <span class="stat-number">{{ total_committee_members }}</span>
+            <a href="{% url 'accounts:user_management' %}" class="stat-link">View Committee</a>
+        </div>
+    </div>
+
+    <div class="main-actions">
+        <h2>الإجراءات الرئيسية</h2>
+        <div class="action-cards">
+            <div class="action-card">
+                <div class="card-icon">📋</div>
+                <h3>الخطط</h3>
+                <p>عرض وإدارة جميع خطط التوظيف</p>
+                <a href="{% url 'students:plan_list' %}" class="btn btn-primary btn-large">عرض الخطط</a>
+            </div>
+
+            <div class="action-card">
+                <div class="card-icon">➕</div>
+                <h3>إضافة خطة جديدة</h3>
+                <p>إنشاء خطة توظيف جديدة</p>
+                <a href="{% url 'students:plan_create' %}" class="btn btn-success btn-large">إضافة خطة</a>
+            </div>
+
+            <div class="action-card">
+                <div class="card-icon">👥</div>
+                <h3>إضافة مرشحين إلى الخطة</h3>
+                <p>تعيين المرشحين إلى خطط التوظيف</p>
+                <a href="{% url 'students:candidate_create' %}" class="btn btn-info btn-large">إضافة مرشح جديد</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="admin-privileges">
+        <h3>Administrator Privileges</h3>
+        <ul>
+            <li>✓ Add and manage candidate data</li>
+            <li>✓ Manage evaluation process</li>
+            <li>✓ Generate reports</li>
+            <li>✓ Manage users and permissions</li>
+            <li>✓ View all evaluation results</li>
+        </ul>
+    </div>
+</div>
+
+<style>
+.dashboard-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.user-role {
+    color: #28a745;
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+.dashboard-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 8px;
+    text-align: center;
+    border-left: 4px solid #007bff;
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #007bff;
+    display: block;
+    margin: 0.5rem 0;
+}
+
+.stat-link {
+    color: #6c757d;
+    text-decoration: none;
+    font-size: 0.9rem;
+}
+
+.dashboard-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.action-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.candidates-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.candidate-card {
+    background: #f8f9fa;
+    padding: 1rem;
+    margin-bottom: 0.5rem;
+    border-radius: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.candidate-date {
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.candidate-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.admin-privileges {
+    background: #e8f5e8;
+    padding: 1.5rem;
+    border-radius: 8px;
+}
+
+.admin-privileges ul {
+    list-style: none;
+    padding: 0;
+}
+
+.admin-privileges li {
+    margin: 0.5rem 0;
+    color: #28a745;
+}
+
+.btn {
+    padding: 0.5rem 1rem;
+    text-decoration: none;
+    border-radius: 4px;
+    display: inline-block;
+    text-align: center;
+}
+
+.btn-primary {
+    background: #007bff;
+    color: white;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+.plan-card {
+    background: #f8f9fa;
+    padding: 1rem;
+    margin-bottom: 0.5rem;
+    border-radius: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-left: 4px solid #17a2b8;
+}
+
+.plan-info h4 {
+    margin: 0 0 0.5rem 0;
+    color: #17a2b8;
+}
+
+.plan-info p {
+    margin: 0.25rem 0;
+    font-size: 0.9rem;
+}
+
+.plan-date {
+    color: #6c757d;
+    font-size: 0.8rem;
+}
+
+.plan-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-direction: column;
+}
+
+.status-badge {
+    padding: 0.2rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+.status-active {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-inactive {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.status-on_hold {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+.plans-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.text-muted {
+    color: #6c757d;
+    font-style: italic;
+}
+
+.summary-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.summary-item {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 4px;
+}
+
+.summary-item h4 {
+    margin: 0 0 0.5rem 0;
+    color: #495057;
+}
+
+.summary-item ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.summary-item li {
+    margin: 0.25rem 0;
+    color: #6c757d;
+}
+
+.main-actions {
+    margin: 2rem 0;
+    text-align: center;
+}
+
+.main-actions h2 {
+    margin-bottom: 2rem;
+    color: #495057;
+    font-size: 2rem;
+}
+
+.action-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.action-card {
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border: 1px solid #e9ecef;
+}
+
+.action-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
+}
+
+.card-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    display: block;
+}
+
+.action-card h3 {
+    margin: 1rem 0;
+    color: #495057;
+    font-size: 1.5rem;
+}
+
+.action-card p {
+    color: #6c757d;
+    margin-bottom: 1.5rem;
+    font-size: 1rem;
+}
+
+.btn-large {
+    padding: 0.75rem 2rem;
+    font-size: 1.1rem;
+    font-weight: bold;
+    border-radius: 8px;
+    text-decoration: none;
+    display: inline-block;
+    transition: all 0.2s ease;
+}
+
+.btn-success {
+    background: #28a745;
+    color: white;
+}
+
+.btn-success:hover {
+    background: #218838;
+}
+
+.btn-info {
+    background: #17a2b8;
+    color: white;
+}
+
+.btn-info:hover {
+    background: #138496;
+}
+</style>
+{% endblock %}

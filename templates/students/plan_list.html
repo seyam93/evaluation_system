@@ -1,0 +1,403 @@
+{% extends 'base.html' %}
+
+{% block title %}إدارة خطط التوظيف - نظام إدارة التوظيف{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1>إدارة خطط التوظيف</h1>
+        <div class="header-actions">
+            <a href="{% url 'students:plan_create' %}" class="btn btn-primary">
+                <i class="icon-add"></i>
+                إضافة خطة جديدة
+            </a>
+            <a href="{% url 'accounts:admin_dashboard' %}" class="btn btn-secondary">
+                <i class="icon-dashboard"></i>
+                العودة للوحة التحكم
+            </a>
+        </div>
+    </div>
+
+    <!-- Simple header -->
+    <div class="plans-header">
+        <h2>قائمة خطط التوظيف</h2>
+    </div>
+
+    <!-- Plans Grid -->
+    <div class="plans-section">
+        {% if plans %}
+            <div class="plans-grid">
+                {% for plan in plans %}
+                    <div class="plan-card">
+                        <div class="plan-header">
+                            <h3>{{ plan.title }}</h3>
+                        </div>
+
+                        <div class="plan-info">
+                            <div class="info-row">
+                                <span class="label">لصالح:</span>
+                                <span class="value">{{ plan.department }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="label">عدد المرشحين:</span>
+                                <span class="value highlight">{{ plan.candidates_count }}</span>
+                            </div>
+                            {% if plan.notes %}
+                                <div class="info-row">
+                                    <span class="label">ملاحظات:</span>
+                                    <span class="value">{{ plan.notes|truncatewords:10 }}</span>
+                                </div>
+                            {% endif %}
+                            <div class="info-row">
+                                <span class="label">تاريخ الإنشاء:</span>
+                                <span class="value">{{ plan.created_at|date:"Y/m/d" }}</span>
+                            </div>
+                        </div>
+
+                        <div class="plan-actions">
+                            <a href="{% url 'students:plan_detail' plan.pk %}" class="btn btn-info btn-sm">
+                                <i class="icon-view"></i>
+                                عرض التفاصيل
+                            </a>
+                            <a href="{% url 'students:plan_update' plan.pk %}" class="btn btn-primary btn-sm">
+                                <i class="icon-edit"></i>
+                                تعديل
+                            </a>
+                            {% if can_manage %}
+                                <form method="POST" action="{% url 'students:plan_delete' plan.pk %}"
+                                      style="display: inline;"
+                                      onsubmit="return confirm('هل أنت متأكد من حذف هذه الخطة؟')">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-danger btn-sm">
+                                        <i class="icon-delete"></i>
+                                        حذف
+                                    </button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <div class="empty-icon">📋</div>
+                <h3>لا توجد خطط توظيف</h3>
+                <p>لم يتم إنشاء أي خطط توظيف بعد.</p>
+                <a href="{% url 'students:plan_create' %}" class="btn btn-primary">
+                    إضافة خطة جديدة
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    direction: rtl;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding: 25px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 10px;
+}
+
+.page-header h1 {
+    margin: 0;
+    font-size: 2rem;
+}
+
+.header-actions {
+    display: flex;
+    gap: 15px;
+}
+
+.filters-section {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    margin-bottom: 25px;
+}
+
+.filters-section h3 {
+    margin: 0 0 15px 0;
+    color: #495057;
+}
+
+.filters-form {
+    display: flex;
+    gap: 20px;
+    align-items: end;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.filter-group label {
+    font-weight: bold;
+    color: #495057;
+    font-size: 0.9rem;
+}
+
+.filter-group select {
+    padding: 8px 12px;
+    border: 2px solid #e9ecef;
+    border-radius: 4px;
+    background: white;
+}
+
+.plans-section {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    padding: 25px;
+}
+
+.plans-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 25px;
+}
+
+.plan-card {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 10px;
+    padding: 20px;
+    transition: all 0.3s ease;
+    border-right: 4px solid #667eea;
+}
+
+.plan-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+}
+
+.plan-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.plan-header h3 {
+    margin: 0;
+    color: #495057;
+    font-size: 1.3rem;
+    flex: 1;
+    margin-left: 10px;
+}
+
+.status-badge {
+    padding: 5px 12px;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    text-align: center;
+    min-width: 80px;
+}
+
+.status-active {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-inactive {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.status-on_hold {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+.plan-info {
+    margin-bottom: 15px;
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    padding: 5px 0;
+}
+
+.info-row .label {
+    font-weight: bold;
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.info-row .value {
+    color: #495057;
+    font-size: 0.9rem;
+}
+
+.info-row .value.highlight {
+    background: #e3f2fd;
+    padding: 2px 8px;
+    border-radius: 4px;
+    color: #1976d2;
+    font-weight: bold;
+}
+
+.plan-dates {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+    padding: 10px;
+    background: #e9ecef;
+    border-radius: 6px;
+}
+
+.date-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+}
+
+.date-label {
+    font-size: 0.8rem;
+    color: #6c757d;
+    margin-bottom: 2px;
+}
+
+.date-value {
+    font-weight: bold;
+    color: #495057;
+    font-size: 0.9rem;
+}
+
+.plan-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.btn {
+    padding: 8px 15px;
+    border: none;
+    border-radius: 4px;
+    text-decoration: none;
+    font-weight: bold;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.3s ease;
+    font-size: 0.85rem;
+}
+
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+}
+
+.btn-primary {
+    background: #667eea;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #5a67d8;
+    transform: translateY(-1px);
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+}
+
+.btn-info {
+    background: #17a2b8;
+    color: white;
+}
+
+.btn-info:hover {
+    background: #138496;
+}
+
+.btn-danger {
+    background: #dc3545;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #c82333;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #6c757d;
+}
+
+.empty-icon {
+    font-size: 4rem;
+    margin-bottom: 20px;
+}
+
+.empty-state h3 {
+    margin: 20px 0 10px 0;
+    color: #495057;
+}
+
+.empty-state p {
+    margin-bottom: 30px;
+    font-size: 1.1rem;
+}
+
+/* Icons using CSS */
+.icon-add::before { content: "➕ "; }
+.icon-dashboard::before { content: "🏠 "; }
+.icon-view::before { content: "👁️ "; }
+.icon-edit::before { content: "✏️ "; }
+.icon-delete::before { content: "🗑️ "; }
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        gap: 15px;
+        text-align: center;
+    }
+
+    .header-actions {
+        justify-content: center;
+    }
+
+    .plans-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .plan-actions {
+        justify-content: center;
+    }
+
+    .filters-form {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+</style>
+{% endblock %}

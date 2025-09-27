@@ -1,0 +1,339 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'assets/vendor/font-awesome/css/font-awesome.min.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        <i class="fas fa-question-circle text-primary"></i>
+                        {{ title }}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+
+                        <!-- Question Type -->
+                        <div class="form-group mb-3">
+                            <label for="{{ form.question_type.id_for_label }}" class="form-label">
+                                {{ form.question_type.label }}
+                                <span class="text-danger">*</span>
+                            </label>
+                            {{ form.question_type }}
+                            {% if form.question_type.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.question_type.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Question Text -->
+                        <div class="form-group mb-3">
+                            <label for="{{ form.question_text.id_for_label }}" class="form-label">
+                                {{ form.question_text.label }}
+                                <span class="text-danger">*</span>
+                            </label>
+                            {{ form.question_text }}
+                            {% if form.question_text.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.question_text.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted">
+                                اكتب نص السؤال بوضوح
+                            </small>
+                        </div>
+
+                        <!-- Q&A Answer Field -->
+                        <div id="qa-fields" style="display: none;">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle"></i>
+                                <strong>ملاحظة:</strong> الإجابة التالية خاصة بأسئلة "السؤال والجواب" وستظهر للجنة التقييم فقط
+                            </div>
+
+                            <div class="form-group mb-3">
+                                <label for="{{ form.answer.id_for_label }}" class="form-label">
+                                    {{ form.answer.label }}
+                                    <span class="text-danger qa-required">*</span>
+                                </label>
+                                {{ form.answer }}
+                                {% if form.answer.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.answer.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                                <small class="form-text text-muted">
+                                    الإجابة النموذجية للسؤال - ستظهر فقط للجنة التقييم
+                                </small>
+                            </div>
+                        </div>
+
+                        <!-- MCQ Options -->
+                        <div id="mcq-fields" style="display: none;">
+                            <div class="alert alert-warning">
+                                <i class="fas fa-list"></i>
+                                <strong>خيارات الاختيار من متعدد:</strong> أضف على الأقل خيارين (أ و ب)
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.option_a.id_for_label }}" class="form-label">
+                                        {{ form.option_a.label }}
+                                        <span class="text-danger mcq-required">*</span>
+                                    </label>
+                                    {{ form.option_a }}
+                                    {% if form.option_a.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.option_a.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.option_b.id_for_label }}" class="form-label">
+                                        {{ form.option_b.label }}
+                                        <span class="text-danger mcq-required">*</span>
+                                    </label>
+                                    {{ form.option_b }}
+                                    {% if form.option_b.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.option_b.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.option_c.id_for_label }}" class="form-label">
+                                        {{ form.option_c.label }}
+                                    </label>
+                                    {{ form.option_c }}
+                                    {% if form.option_c.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.option_c.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.option_d.id_for_label }}" class="form-label">
+                                        {{ form.option_d.label }}
+                                    </label>
+                                    {{ form.option_d }}
+                                    {% if form.option_d.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.option_d.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Correct Answer Field -->
+                        <div id="correct-answer-field" style="display: none;">
+                            <div class="form-group mb-3">
+                                <label for="{{ form.correct_answer.id_for_label }}" class="form-label">
+                                    {{ form.correct_answer.label }}
+                                    <span class="text-danger answer-required">*</span>
+                                </label>
+                                {{ form.correct_answer }}
+                                {% if form.correct_answer.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.correct_answer.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                                <small class="form-text text-muted" id="correct-answer-help">
+                                    للاختيار من متعدد: A, B, C, D | للصح والخطأ: True, False
+                                </small>
+                            </div>
+                        </div>
+
+                        <!-- Is Active -->
+                        <div class="form-group mb-3">
+                            <div class="form-check">
+                                {{ form.is_active }}
+                                <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                    {{ form.is_active.label }}
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Form Errors -->
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {% for error in form.non_field_errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        <!-- Action Buttons -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'evaluation:question_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-right"></i> إلغاء
+                            </a>
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-save"></i>
+                                {% if is_edit %}تحديث السؤال{% else %}إنشاء السؤال{% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Help Section -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-lightbulb text-warning"></i>
+                        نصائح لكتابة الأسئلة
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>أسئلة السؤال والجواب:</h6>
+                            <ul class="small">
+                                <li>اكتب السؤال بوضوح ودقة</li>
+                                <li>ضع إجابة نموذجية مفصلة</li>
+                                <li>حدد معايير التقييم بوضوح</li>
+                                <li>المرشح سيرى السؤال فقط</li>
+                                <li>لجنة التقييم ترى السؤال والإجابة النموذجية</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>أسئلة التقييم الأخرى:</h6>
+                            <ul class="small">
+                                <li><strong>رقمي:</strong> يتطلب إدخال رقم</li>
+                                <li><strong>نصي:</strong> يتطلب إجابة نصية</li>
+                                <li><strong>تقييم:</strong> تقييم بالدرجات</li>
+                                <li><strong>اختياري:</strong> اختيار من متعدد</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const questionTypeField = document.getElementById('{{ form.question_type.id_for_label }}');
+    const qaFields = document.getElementById('qa-fields');
+    const mcqFields = document.getElementById('mcq-fields');
+    const correctAnswerField = document.getElementById('correct-answer-field');
+    const correctAnswerHelp = document.getElementById('correct-answer-help');
+
+    function toggleQuestionFields() {
+        const questionType = questionTypeField.value;
+
+        // Hide all fields initially
+        qaFields.style.display = 'none';
+        mcqFields.style.display = 'none';
+        correctAnswerField.style.display = 'none';
+
+        // Show relevant fields based on type
+        if (questionType === 'qa') {
+            qaFields.style.display = 'block';
+        } else if (questionType === 'mcq') {
+            mcqFields.style.display = 'block';
+            correctAnswerField.style.display = 'block';
+            correctAnswerHelp.textContent = 'أدخل A أو B أو C أو D';
+        } else if (questionType === 'true_false') {
+            correctAnswerField.style.display = 'block';
+            correctAnswerHelp.textContent = 'أدخل True أو False';
+        }
+
+        // Toggle required indicators
+        document.querySelectorAll('.qa-required').forEach(span => {
+            span.style.display = questionType === 'qa' ? 'inline' : 'none';
+        });
+
+        document.querySelectorAll('.mcq-required').forEach(span => {
+            span.style.display = questionType === 'mcq' ? 'inline' : 'none';
+        });
+
+        document.querySelectorAll('.answer-required').forEach(span => {
+            span.style.display = (questionType === 'mcq' || questionType === 'true_false') ? 'inline' : 'none';
+        });
+    }
+
+    // Initial check
+    toggleQuestionFields();
+
+    // Listen for changes
+    questionTypeField.addEventListener('change', toggleQuestionFields);
+});
+</script>
+
+<style>
+.form-label {
+    font-weight: 600;
+    color: #495057;
+}
+
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.invalid-feedback {
+    display: block;
+}
+
+.btn {
+    min-width: 120px;
+}
+
+.text-danger {
+    color: #dc3545 !important;
+}
+
+.alert {
+    border: none;
+    border-radius: 8px;
+}
+
+ul li {
+    margin-bottom: 4px;
+}
+
+.form-check-input {
+    margin-top: 0.25rem;
+}
+
+.form-check-label {
+    font-weight: 500;
+}
+
+h6 {
+    color: #495057;
+    font-weight: 600;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ candidate.student_name }} - الملف الشخصي</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/main.css' %}">
+    <style>
+        .tests-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            padding: 10px 0;
+        }
+
+        .test-item {
+            text-align: center;
+        }
+
+        .test-name {
+            font-size: 12px;
+            font-weight: bold;
+            color: #495057;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .score-circle {
+            display: inline-block;
+            position: relative;
+        }
+
+        .circle-progress {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: conic-gradient(#4CAF50 0deg, #4CAF50 0deg, #e9ecef 0deg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            transition: all 0.8s ease-in-out;
+        }
+
+        .circle-progress::before {
+            content: '';
+            position: absolute;
+            width: 65px;
+            height: 65px;
+            border-radius: 50%;
+            background: white;
+        }
+
+        .circle-progress-inner {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+        }
+
+        .circle-progress-percentage {
+            font-size: 14px;
+            font-weight: bold;
+            color: #495057;
+            line-height: 1;
+        }
+
+        .circle-progress-score {
+            font-size: 10px;
+            color: #6c757d;
+            margin-top: 2px;
+        }
+
+        /* Color variations based on score */
+        .score-excellent { background: conic-gradient(#28a745 0deg, #28a745 var(--percentage), #e9ecef var(--percentage)); }
+        .score-very-good { background: conic-gradient(#17a2b8 0deg, #17a2b8 var(--percentage), #e9ecef var(--percentage)); }
+        .score-good { background: conic-gradient(#ffc107 0deg, #ffc107 var(--percentage), #e9ecef var(--percentage)); }
+        .score-acceptable { background: conic-gradient(#fd7e14 0deg, #fd7e14 var(--percentage), #e9ecef var(--percentage)); }
+        .score-poor { background: conic-gradient(#dc3545 0deg, #dc3545 var(--percentage), #e9ecef var(--percentage)); }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <a href="{% url 'students:candidate_list' %}" class="nav-brand">نظام التوظيف</a>
+            <ul class="nav-links">
+                <li><a href="{% url 'students:candidate_list' %}">المرشحين</a></li>
+                <li><a href="{% url 'students:candidate_create' %}">إضافة مرشح</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Candidate Header -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-2">
+                        <img src="{{ candidate.get_profile_image_url }}" alt="{{ candidate.student_name }}"
+                             style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover;">
+                    </div>
+                    <div class="col-8">
+                        <h1 class="mb-2">{{ candidate.student_name }}</h1>
+                        <p class="mb-1"><strong>البريد الإلكتروني:</strong> {{ candidate.email }}</p>
+                        <p class="mb-1"><strong>الهاتف:</strong> {{ candidate.phone_number }}</p>
+                        <p class="mb-1"><strong>العمر:</strong> {{ candidate.age }} سنة (تاريخ الميلاد: {{ candidate.birth_date }})</p>
+                        <p class="mb-0"><strong>الجنس:</strong> {{ candidate.get_gender_display }} | <strong>الحالة:</strong> {{ candidate.get_marital_status_display|default:"غير محدد" }}</p>
+                    </div>
+                    <div class="col-2 text-right">
+                        <a href="{% url 'students:candidate_update' candidate.pk %}" class="btn btn-warning mb-2 w-100">تعديل الملف</a>
+                        <button class="btn btn-danger w-100" onclick="deleteCandidate()">حذف</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Main Information -->
+            <div class="col-8">
+                <!-- Basic Information -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h4>المعلومات الأساسية</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-6">
+                                <h6>البيانات الشخصية</h6>
+                                <table class="table table-borderless">
+                                    <tr>
+                                        <td><strong>الاسم الكامل:</strong></td>
+                                        <td>{{ candidate.student_name }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>تاريخ الميلاد:</strong></td>
+                                        <td>{{ candidate.birth_date }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>الجنس:</strong></td>
+                                        <td>{{ candidate.get_gender_display }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>الحالة الاجتماعية:</strong></td>
+                                        <td>{{ candidate.get_marital_status_display|default:"غير محدد" }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>عدد الأطفال:</strong></td>
+                                        <td>{{ candidate.number_of_children|default:0 }}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                            <div class="col-6">
+                                <h6>معلومات الاتصال</h6>
+                                <table class="table table-borderless">
+                                    <tr>
+                                        <td><strong>البريد الإلكتروني:</strong></td>
+                                        <td>{{ candidate.email }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>الهاتف:</strong></td>
+                                        <td>{{ candidate.phone_number }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>العنوان:</strong></td>
+                                        <td>{{ candidate.address|linebreaks|default:"غير مقدم" }}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Education -->
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h4>التعليم والمؤهلات</h4>
+                        <button class="btn btn-primary btn-sm" onclick="addQualification()">إضافة مؤهل</button>
+                    </div>
+                    <div class="card-body">
+                        <h6>المؤهل الأساسي</h6>
+                        <div class="alert alert-light mb-3">
+                            <div class="row">
+                                <div class="col-6">
+                                    <strong>الدرجة العلمية:</strong> {{ candidate.primary_qualification }}<br>
+                                    <strong>الجامعة:</strong> {{ candidate.university }}<br>
+                                    <strong>التقدير:</strong>
+                                    {% if candidate.general_degree == 'excellent' %}
+                                        <span class="badge badge-success">ممتاز</span>
+                                    {% elif candidate.general_degree == 'very_good' %}
+                                        <span class="badge badge-info">جيد جداً</span>
+                                    {% elif candidate.general_degree == 'good' %}
+                                        <span class="badge badge-warning">جيد</span>
+                                    {% elif candidate.general_degree == 'acceptable' %}
+                                        <span class="badge badge-secondary">مقبول</span>
+                                    {% else %}
+                                        <span class="badge badge-light">غير محدد</span>
+                                    {% endif %}
+                                </div>
+                                <div class="col-6">
+                                    <strong>سنة التخرج:</strong> {{ candidate.graduation_year|default:"غير محدد" }}<br>
+                                    <strong>التخصص:</strong> غير محدد<br>
+                                    <strong>المعدل التراكمي:</strong> غير محدد
+                                </div>
+                            </div>
+                        </div>
+
+                        <h6>المؤهلات الإضافية</h6>
+                        {% if qualifications %}
+                            <div class="table">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>الدرجة العلمية</th>
+                                            <th>التاريخ</th>
+                                            <th>الإجراءات</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for qualification in qualifications %}
+                                            <tr>
+                                                <td>{{ qualification.degree_name }}</td>
+                                                <td>{{ qualification.degree_date|default:"غير محدد" }}</td>
+                                                <td>
+                                                    <button class="btn btn-warning btn-sm">تعديل</button>
+                                                    <button class="btn btn-danger btn-sm">حذف</button>
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="alert alert-info">
+                                <p class="mb-0">لا توجد مؤهلات إضافية مسجلة.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Work Experience -->
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h4>الخبرات العملية</h4>
+                        <button class="btn btn-primary btn-sm" onclick="addExperience()">إضافة خبرة</button>
+                    </div>
+                    <div class="card-body">
+                        {% if experiences %}
+                            <div class="table">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>المنصب</th>
+                                            <th>الشركة</th>
+                                            <th>المدة</th>
+                                            <th>الإجراءات</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for experience in experiences %}
+                                            <tr>
+                                                <td>{{ experience.job_title }}</td>
+                                                <td>{{ experience.company_name|default:"غير محدد" }}</td>
+                                                <td>
+                                                    {% if experience.start_date %}
+                                                        {{ experience.start_date|date:"M Y" }}
+                                                        {% if experience.end_date %}
+                                                            - {{ experience.end_date|date:"M Y" }}
+                                                        {% else %}
+                                                            - حتى الآن
+                                                        {% endif %}
+                                                    {% else %}
+                                                        غير محدد
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    <button class="btn btn-warning btn-sm">تعديل</button>
+                                                    <button class="btn btn-danger btn-sm">حذف</button>
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="alert alert-info">
+                                <p class="mb-0">لا توجد خبرات عملية مسجلة.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="col-4">
+                <!-- Quick Stats -->
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h5>إحصائيات سريعة</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-6">
+                                <h3 class="text-primary">{{ candidate.age }}</h3>
+                                <small>سنة</small>
+                            </div>
+                            <div class="col-6">
+                                <h3 class="text-success">6</h3>
+                                <small>سنوات خبرة</small>
+                            </div>
+                        </div>
+                        <hr>
+                        <div class="row text-center">
+                            <div class="col-6">
+                                <h3 class="text-info">3</h3>
+                                <small>مؤهلات</small>
+                            </div>
+                            <div class="col-6">
+                                <h3 class="text-warning">3</h3>
+                                <small>شركات</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Back to List -->
+                <div class="card">
+                    <div class="card-body">
+                        <a href="{% url 'students:candidate_list' %}" class="btn btn-secondary w-100">
+                            العودة للقائمة
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Previous Tests Section -->
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h5>الاختبارات السابقة</h5>
+                    </div>
+                    <div class="card-body">
+                        {% load examinations_extras %}
+                        {% get_previous_tests candidate as previous_tests %}
+                        {% if previous_tests %}
+                            <div class="tests-grid">
+                                {% for test in previous_tests %}
+                                    <div class="test-item">
+                                        <div class="test-name">{{ test.test_category.name }}</div>
+                                        <div class="score-circle" data-percentage="{{ test.percentage_score }}">
+                                            <div class="circle-progress">
+                                                <div class="circle-progress-inner">
+                                                    <div class="circle-progress-percentage">{{ test.percentage_score|floatformat:0 }}%</div>
+                                                    <div class="circle-progress-score">{{ test.score }}/{{ test.max_possible_score }}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <p class="text-muted text-center">لا توجد اختبارات سابقة مسجلة</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{% static 'js/main.js' %}"></script>
+    <script>
+        function deleteCandidate() {
+            if (confirm('هل أنت متأكد من حذف هذا المرشح؟ هذا الإجراء لا يمكن التراجع عنه.')) {
+                showAlert('سيتم حذف المرشح في التطبيق الحقيقي.', 'warning');
+                // In a real application, this would redirect to the list after deletion
+                setTimeout(() => {
+                    window.location.href = '{% url "students:candidate_list" %}';
+                }, 2000);
+            }
+        }
+
+        function addQualification() {
+            showAlert('جاري فتح نموذج المؤهلات...', 'info');
+            // In a real application, this would open a modal or redirect to a form
+        }
+
+        function addExperience() {
+            showAlert('جاري فتح نموذج الخبرات...', 'info');
+            // In a real application, this would open a modal or redirect to a form
+        }
+
+        function scheduleInterview() {
+            showAlert('ميزة جدولة المقابلات ستفتح في التطبيق الحقيقي.', 'info');
+        }
+
+        function addEvaluation() {
+            showAlert('نموذج التقييم سيفتح في التطبيق الحقيقي.', 'info');
+        }
+
+        function sendEmail() {
+            showAlert('محرر البريد الإلكتروني سيفتح في التطبيق الحقيقي.', 'info');
+        }
+
+        function exportProfile() {
+            showAlert('جاري تصدير الملف الشخصي...', 'info');
+            setTimeout(() => {
+                showAlert('تم تصدير الملف الشخصي بنجاح!', 'success');
+            }, 1500);
+        }
+
+        // Initialize circular progress for test scores
+        function initializeCircularProgress() {
+            const circles = document.querySelectorAll('.score-circle');
+
+            circles.forEach(circle => {
+                const percentage = parseFloat(circle.getAttribute('data-percentage'));
+                const progressElement = circle.querySelector('.circle-progress');
+
+                // Determine color based on percentage
+                let colorClass = '';
+                if (percentage >= 90) {
+                    colorClass = 'score-excellent';
+                } else if (percentage >= 80) {
+                    colorClass = 'score-very-good';
+                } else if (percentage >= 70) {
+                    colorClass = 'score-good';
+                } else if (percentage >= 60) {
+                    colorClass = 'score-acceptable';
+                } else {
+                    colorClass = 'score-poor';
+                }
+
+                // Set the CSS custom property for the percentage
+                progressElement.style.setProperty('--percentage', `${(percentage / 100) * 360}deg`);
+                progressElement.classList.add(colorClass);
+
+                // Animate the progress
+                setTimeout(() => {
+                    progressElement.style.background = `conic-gradient(${getColorForClass(colorClass)} 0deg, ${getColorForClass(colorClass)} ${(percentage / 100) * 360}deg, #e9ecef ${(percentage / 100) * 360}deg)`;
+                }, 100);
+            });
+        }
+
+        function getColorForClass(className) {
+            const colors = {
+                'score-excellent': '#28a745',
+                'score-very-good': '#17a2b8',
+                'score-good': '#ffc107',
+                'score-acceptable': '#fd7e14',
+                'score-poor': '#dc3545'
+            };
+            return colors[className] || '#6c757d';
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize circular progress indicators
+            initializeCircularProgress();
+            console.log('Candidate detail page loaded with circular progress');
+        });
+    </script>
+</body>
+</html>

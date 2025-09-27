@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Add Patient</title>
+  
+  <style>
+    body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #f4f4f4;
+}
+
+.top-bar {
+  background-color: #003366;
+  color: white;
+  text-align: center;
+  padding: 12px;
+  font-size: 20px;
+  font-weight: bold;
+}
+
+.navbar {
+  background-color: #005580;
+  display: flex;
+  justify-content: space-around;
+  padding: 10px;
+}
+
+.navbar a {
+  color: white;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.container {
+  max-width: 800px;
+  margin: 30px auto;
+  background-color: white;
+  padding: 30px;
+  border-radius: 10px;
+}
+
+h1, h2 {
+  color: #003366;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+}
+
+label {
+  margin-top: 15px;
+  font-weight: bold;
+}
+
+input, select {
+  padding: 10px;
+  margin-top: 5px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+}
+
+button {
+  margin-top: 20px;
+  padding: 12px;
+  background-color: #005580;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #003f5c;
+}
+
+#appointmentsContainer {
+  margin-top: 30px;
+}
+
+.appointment-section {
+  margin-top: 20px;
+  padding: 20px;
+  border: 2px solid #005580;
+  border-radius: 10px;
+  background-color: #e6f3ff;
+  box-shadow: 0 2px 8px rgba(0, 85, 128, 0.1);
+}
+
+.appointment-section label {
+  font-weight: bold;
+  color: #003366;
+  margin-top: 10px;
+}
+
+.appointment-section input {
+  width: 100%;
+  padding: 10px;
+  margin-top: 6px;
+  margin-bottom: 12px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+#patientForm {
+  direction: rtl;       /* يخلي النصوص من اليمين لليسار */
+  text-align: right;    /* يخلي الـ labels تبدأ من اليمين */
+  font-size: 18px;      /* حجم الخط */
+}
+
+#patientForm input,
+#patientForm select,
+#patientForm button,
+#patientForm label {
+  font-size: 20px;      /* يكبر خط كل العناصر */
+}
+
+#basicDataContainer label,
+#basicDataContainer input,
+#basicDataContainer select {
+  display: block;       /* يخلي كل عنصر يظهر في سطر لوحده */
+  width: 100%;          /* يمتد على عرض الكونتينر */
+  margin-top: 10px;     /* مسافة بين العناصر */
+}
+
+.experience-section label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+.experience-section input[type="text"] {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  box-sizing: border-box;
+}
+
+
+
+  </style>
+</head>
+<body>
+  <header class="top-bar">المنظومة الألية لإختبارات فرع المعلومات</header>
+
+  <nav class="navbar">
+    <a href="{% url 'home' %}">الصفحة الرئيسية </a>
+    <a href="{% url 'add_person' %}">إضافة ممتحن</a>
+
+  </nav>
+
+  <main class="container">
+
+    {% if messages %}
+      {% for message in messages %}
+         <div class="alert" style="background-color: #d4edda; color: #155724; padding: 10px; border-radius: 5px; margin-bottom: 15px;">
+           {{ message }}
+         </div>
+      {% endfor %}
+    {% endif %}
+
+    <form method="POST" id="patientForm" dir="rtl">
+      {% csrf_token %}
+      
+  
+      <button type="button" id="toggleBasicBtn">البيانات الأساسية</button>
+
+      <div id="basicDataContainer" style="display:none;"> <!-- مخفي في البداية -->
+        <label>الأسم:</label>
+        <input type="text" name="studentname" required />
+
+        <label>تاريخ الميلاد:</label>
+        <input type="date" name="birthdate" required />
+
+        <label>الجنس:</label>
+        <select name="gender" required>
+          <option value="Male">ذكر</option>
+          <option value="Female">أنثي</option>
+        </select>
+
+        <label>المؤهل:</label>
+        <input type="text" name="quali" />
+
+        <label>جامعة:</label>
+        <input type="text" name="university" />
+
+        <label>التقدير العام:</label>
+        <select name="generaldegree" required>
+          <option value="Exce">إمتياز</option>
+          <option value="verygood">جيد جدا</option>
+          <option value="good">جيد</option>
+          <option value="suff">مقبول</option>
+        </select>
+
+        <label>سنة التخرج:</label>
+        <input type="number" name="graduationyear" required />
+
+        <label>الحالة الإجتماعية:</label>
+        <select name="maritalstatus" required>
+          <option value="single">أعزب</option>
+          <option value="married">متزوج</option>
+        </select>
+
+        <label>عدد الأبناء:</label>
+        <input type="number" name="childno" required />
+
+        <label>محل الإقامة:</label>
+        <input type="text" name="address" />
+      </div>
+      <button type="button" id="toggleTestsBtn">الاختبارات السابقة</button>
+      <div id="testsContainer" style="display:none; margin-top:10px;">
+        <div class="appointment-section">
+          <label>اختبار النظم:</label>
+          <input type="text" name="it_degree" />
+
+          <label>المعلومات:</label>
+          <input type="text" name="information_degree" />
+
+          <label>نتيجة اختبار الأنجليزي:</label>
+          <input type="text" name="english_degree" />
+
+          <label>الإختبار النفسي:</label>
+          <input type="text" name="nafsy_degree" />
+
+          <label>الإختبار الأمني:</label>
+          <input type="text" name="security_degree" />
+        </div>
+      </div>
+      
+      <!-- زرار إضافة التأهيل العلمي -->
+<button type="button" id="addQualificationBtn">التأهيل العلمي</button>
+
+<!-- الكونتينر اللي هيتجمع فيه التأهيلات -->
+<div id="qualificationsContainer"></div>
+
+<script>
+  const addQualificationBtn = document.getElementById("addQualificationBtn");
+  const qualificationsContainer = document.getElementById("qualificationsContainer");
+
+  addQualificationBtn.addEventListener("click", () => {
+    const section = document.createElement("div");
+    section.className = "qualification-section";
+    section.style.marginBottom = "15px";
+    section.style.border = "1px solid #ccc";
+    section.style.padding = "10px";
+    section.style.borderRadius = "8px";
+
+    section.innerHTML = `
+      <label style="display:block; margin-bottom:5px;">اسم التأهيل العلمي:</label>
+      <input type="text" name="qualification_name[]" style="width:97%; padding:10px; border:1px solid #ccc; border-radius:5px;" />
+    `;
+
+    qualificationsContainer.appendChild(section);
+  });
+</script>
+
+
+<!-- زرار إضافة خبرة سابقة -->
+<button type="button" id="addExperienceBtn">الخبرات الوظيفية</button>
+
+<!-- الكونتينر اللي هيتجمع فيه الخبرات -->
+<div id="experiencesContainer"></div>
+
+<script>
+  const addExperienceBtn = document.getElementById("addExperienceBtn");
+  const experiencesContainer = document.getElementById("experiencesContainer");
+
+  addExperienceBtn.addEventListener("click", () => {
+    const section = document.createElement("div");
+    section.className = "experience-section";
+    section.style.marginBottom = "15px";
+    section.style.border = "1px solid #ccc";
+    section.style.padding = "10px";
+    section.style.borderRadius = "8px";
+
+    section.innerHTML = `
+      <label>المسمى الوظيفي:</label>
+      <input type="text" name="job_title[]" />
+    `;
+
+    experiencesContainer.appendChild(section);
+  });
+</script>
+
+        
+      <div id="appointmentsContainer"></div> 
+      
+      <!-- <button type="button" id="addAppointmentBtn">الأختبارات السابقة</button> -->
+      <button type="submit">حفظ البيانات</button>
+    </form>
+  </main>
+  
+
+
+<script>
+  const toggleBtn = document.getElementById("toggleBasicBtn");
+  const basicDataContainer = document.getElementById("basicDataContainer");
+
+  toggleBtn.addEventListener("click", () => {
+    if (basicDataContainer.style.display === "none") {
+      basicDataContainer.style.display = "block";
+    } else {
+      basicDataContainer.style.display = "none";
+    }
+  });
+
+      const toggleTestsBtn = document.getElementById("toggleTestsBtn");
+    const testsContainer = document.getElementById("testsContainer");
+    toggleTestsBtn.addEventListener("click", () => {
+      testsContainer.style.display = 
+        testsContainer.style.display === "none" ? "block" : "none";
+    });
+</script>
+
+<script>
+  // زرار التأهيل العلمي
+  const toggleQualificationBtn = document.getElementById("toggleQualificationBtn");
+  const qualificationContainer = document.getElementById("qualificationContainer");
+
+  toggleQualificationBtn.addEventListener("click", () => {
+    if (qualificationContainer.style.display === "none") {
+      qualificationContainer.style.display = "block";
+    } else {
+      qualificationContainer.style.display = "none";
+    }
+  });
+</script>
+  
+  <script>
+    // إخفاء الرسالة بعد 4 ثواني باستخدام class .alert
+    setTimeout(() => {
+      const messageDiv = document.querySelector('.alert');
+      if (messageDiv) {
+        messageDiv.style.display = 'none';
+      }
+    }, 2000);
+  </script>
+  <script>
+    document.getElementById("patientForm").addEventListener("keydown", function(event) {
+      if (event.key === "Enter") {
+        event.preventDefault();
+      }
+    });
+  </script>
+  
+  
+  </body>
+  </html>

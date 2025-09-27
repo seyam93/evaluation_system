@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>واجهة الاختبار</title>
+    <style>
+        /* Font Awesome Icons - Essential icons only */
+        .fas {
+            font-family: inherit;
+            font-weight: bold;
+        }
+        .fa-arrow-left::before { content: "←"; }
+        .fa-eye::before { content: "👁"; }
+        .fa-question-circle::before { content: "❓"; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <!-- Header -->
+    <div class="page-header">
+        <div class="header-logo">
+            <img src="/static/images/logo.png" alt="Logo" class="logo-img">
+        </div>
+        <h1 class="plan-title">{{ active_session.plan.title }}</h1>
+        <div class="candidate-info">
+            <span class="candidate-name">{{ active_session.current_candidate.student_name }}</span>
+        </div>
+    </div>
+
+    <!-- Question Display Area -->
+    <div class="question-display" id="questionDisplay">
+        <div class="display-header">
+            <h3>السؤال الحالي</h3>
+            <div class="question-counter">
+                <span id="questionCounter">سؤال رقم 1</span>
+            </div>
+        </div>
+        <div class="question-content" id="questionContent">
+            <div class="loading-state">
+                <i class="fas fa-question-circle"></i>
+                <p>جاري تحميل السؤال...</p>
+            </div>
+        </div>
+        <div class="question-actions">
+            <button class="next-question-btn" onclick="loadRandomQuestion()">
+                <i class="fas fa-arrow-left"></i>
+                سؤال آخر
+            </button>
+        </div>
+    </div>
+
+    <!-- Back Button -->
+    <div class="back-section">
+        <a href="{% url 'evaluation:examinee_dashboard' %}" class="back-btn">
+            <i class="fas fa-arrow-left"></i>
+            العودة للوحة التحكم
+        </a>
+    </div>
+</div>
+
+<script>
+let currentQuestionNumber = 0;
+
+// Load a random question (examinee sees question only, no answer)
+function loadRandomQuestion() {
+    const questionContent = document.getElementById('questionContent');
+    const questionCounter = document.getElementById('questionCounter');
+    const nextBtn = document.querySelector('.next-question-btn');
+
+    // Show loading state
+    questionContent.innerHTML = `
+        <div class="loading-state">
+            <i class="fas fa-question-circle"></i>
+            <p>جاري تحميل السؤال...</p>
+        </div>
+    `;
+    nextBtn.disabled = true;
+
+    fetch('/evaluation/ajax/random-qa-question/', {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                currentQuestionNumber++;
+                questionCounter.textContent = `سؤال رقم ${currentQuestionNumber}`;
+
+                let html = `<div class="question-text">${data.question}</div>`;
+
+                // Check question type from the fetched data
+                if (data.question_type === 'mcq' && data.options) {
+                    html += `<div class="options-list">`;
+                    data.options.forEach((option, index) => {
+                        const label = String.fromCharCode(65 + index); // A, B, C, D
+                        html += `<div class="option-item">${label}. ${option}</div>`;
+                    });
+                    html += `</div>`;
+                } else if (data.question_type === 'true_false') {
+                    html += `
+                        <div class="options-list">
+                            <div class="option-item">أ. صحيح</div>
+                            <div class="option-item">ب. خطأ</div>
+                        </div>
+                    `;
+                }
+
+                questionContent.innerHTML = html;
+                nextBtn.disabled = false;
+            } else {
+                questionContent.innerHTML = `
+                    <div class="error-state">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <p>حدث خطأ في تحميل السؤال</p>
+                        <button onclick="loadRandomQuestion()" class="retry-btn">إعادة المحاولة</button>
+                    </div>
+                `;
+                nextBtn.disabled = false;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            questionContent.innerHTML = `
+                <div class="error-state">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p>حدث خطأ في الاتصال</p>
+                    <button onclick="loadRandomQuestion()" class="retry-btn">إعادة المحاولة</button>
+                </div>
+            `;
+            nextBtn.disabled = false;
+        });
+}
+
+// Load first question when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    loadRandomQuestion();
+});
+
+// Auto refresh to sync with committee and check for exam end
+setInterval(function() {
+    // Check if exam has been ended by examiner
+    fetch('/evaluation/ajax/check-exam-status/', {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        // If exam is no longer active, redirect to dashboard
+        if (data.success && !data.exam_active) {
+            alert('تم إنهاء الاختبار من قبل المشرف');
+            window.location.href = '/evaluation/examinee/';
+        }
+    })
+    .catch(error => {
+        console.log('Status check failed:', error);
+    });
+}, 5000);
+</script>
+
+<style>
+body {
+    margin: 0;
+    padding: 0;
+    background: #f8fafc;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+.container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 20px;
+    min-height: 100vh;
+}
+
+/* Header */
+.page-header {
+    text-align: center;
+    background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+    color: white;
+    padding: 24px;
+    border-radius: 16px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 20px rgba(59, 130, 246, 0.15);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.header-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.logo-img {
+    height: 60px;
+    width: auto;
+    object-fit: contain;
+    filter: brightness(1.2) drop-shadow(0 2px 8px rgba(0,0,0,0.2));
+}
+
+.plan-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.candidate-info {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.95rem;
+}
+
+.candidate-name {
+    font-weight: 500;
+}
+
+/* Question Display */
+
+/* Question Display */
+.question-display {
+    background: white;
+    border: 2px solid #3b82f6;
+    border-radius: 16px;
+    margin-bottom: 30px;
+    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.15);
+    min-height: 400px;
+}
+
+.display-header {
+    background: #3b82f6;
+    color: white;
+    padding: 20px 24px;
+    border-radius: 14px 14px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.display-header h3 {
+    margin: 0;
+    font-size: 1.3rem;
+    font-weight: 600;
+}
+
+.question-counter {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.95rem;
+    font-weight: 500;
+}
+
+.question-content {
+    padding: 30px;
+}
+
+.question-text {
+    font-size: 1.2rem;
+    color: #1e293b;
+    line-height: 1.6;
+    margin-bottom: 20px;
+    padding: 20px;
+    background: #f8fafc;
+    border-radius: 12px;
+    border-left: 4px solid #3b82f6;
+}
+
+.options-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.option-item {
+    background: #f1f5f9;
+    padding: 16px 20px;
+    border-radius: 12px;
+    border: 2px solid #e2e8f0;
+    font-size: 1.1rem;
+    color: #374151;
+    transition: all 0.2s ease;
+}
+
+.option-item:hover {
+    border-color: #94a3b8;
+}
+
+/* Question Actions */
+.question-actions {
+    padding: 24px;
+    border-top: 1px solid #e2e8f0;
+    text-align: center;
+    background: #f8fafc;
+    border-radius: 0 0 14px 14px;
+}
+
+.next-question-btn {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    color: white;
+    border: none;
+    padding: 16px 32px;
+    border-radius: 12px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(5, 150, 105, 0.3);
+}
+
+.next-question-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #047857 0%, #065f46 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(5, 150, 105, 0.4);
+}
+
+.next-question-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: 0 2px 8px rgba(5, 150, 105, 0.2);
+}
+
+/* Loading and Error States */
+.loading-state, .error-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #64748b;
+}
+
+.loading-state i, .error-state i {
+    font-size: 3rem;
+    margin-bottom: 20px;
+    display: block;
+}
+
+.loading-state i {
+    color: #3b82f6;
+    animation: pulse 2s infinite;
+}
+
+.error-state i {
+    color: #ef4444;
+}
+
+.loading-state p, .error-state p {
+    margin: 0 0 20px 0;
+    font-size: 1.1rem;
+    line-height: 1.5;
+}
+
+.retry-btn {
+    background: #ef4444;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.retry-btn:hover {
+    background: #dc2626;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* Back Section */
+.back-section {
+    text-align: center;
+    padding: 20px 0;
+}
+
+.back-btn {
+    background: #64748b;
+    color: white;
+    text-decoration: none;
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+}
+
+.back-btn:hover {
+    background: #475569;
+    color: white;
+    text-decoration: none;
+    transform: translateY(-1px);
+}
+
+/* Mobile Responsive */
+@media (max-width: 640px) {
+    .container {
+        padding: 16px;
+    }
+
+    .page-header {
+        padding: 20px 16px;
+    }
+
+    .logo-img {
+        height: 48px;
+    }
+
+    .plan-title {
+        font-size: 1.25rem;
+    }
+
+    .question-content {
+        padding: 20px;
+    }
+
+    .question-text {
+        font-size: 1.1rem;
+        padding: 16px;
+    }
+
+    .display-header {
+        padding: 16px;
+        flex-direction: column;
+        gap: 8px;
+        text-align: center;
+    }
+
+    .display-header h3 {
+        font-size: 1.1rem;
+    }
+
+    .question-counter {
+        font-size: 0.85rem;
+        padding: 6px 12px;
+    }
+
+    .question-actions {
+        padding: 20px 16px;
+    }
+
+    .next-question-btn {
+        padding: 14px 24px;
+        font-size: 1rem;
+    }
+
+    .loading-state, .error-state {
+        padding: 40px 16px;
+    }
+
+    .loading-state i, .error-state i {
+        font-size: 2.5rem;
+    }
+}
+</style>
+
+</body>
+</html>

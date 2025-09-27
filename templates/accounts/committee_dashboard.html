@@ -1,0 +1,247 @@
+{% extends 'base.html' %}
+
+{% block title %}Committee Dashboard - Recruitment System{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="dashboard-header">
+        <h1>Evaluation Committee Dashboard</h1>
+        <p>Welcome back, {{ user.get_full_name|default:user.username }}!</p>
+        <p class="user-role">Evaluation Committee Member</p>
+    </div>
+
+    <div class="dashboard-stats">
+        <div class="stat-card">
+            <h3>Total Candidates</h3>
+            <span class="stat-number">{{ total_candidates }}</span>
+            <a href="#" class="stat-link">View Candidates</a>
+        </div>
+
+        <div class="stat-card">
+            <h3>Evaluation Status</h3>
+            <span class="stat-number">{% if can_evaluate %}Active{% else %}Inactive{% endif %}</span>
+            <p class="stat-link">{% if can_evaluate %}Ready to evaluate{% else %}Contact admin{% endif %}</p>
+        </div>
+
+        <div class="stat-card">
+            <h3>My Evaluations</h3>
+            <span class="stat-number">0</span>
+            <a href="#" class="stat-link">View History</a>
+        </div>
+    </div>
+
+    <div class="dashboard-content">
+        <div class="committee-actions">
+            <h3>Available Actions</h3>
+            <div class="action-buttons">
+                {% if can_evaluate %}
+                    <a href="{% url 'students:plan_selection_for_evaluation' %}" class="btn btn-primary">Start Plan-Based Evaluation</a>
+                    <a href="{% url 'students:plan_list' %}" class="btn btn-secondary">View Recruitment Plans</a>
+                    <a href="{% url 'students:candidate_list' %}" class="btn btn-secondary">View All Candidates</a>
+                {% else %}
+                    <p class="inactive-message">Your evaluation access is currently inactive. Please contact the administrator.</p>
+                {% endif %}
+                <a href="#" class="btn btn-info">My Evaluation History</a>
+            </div>
+        </div>
+
+        <div class="recent-candidates">
+            <h3>Candidates for Review</h3>
+            {% if recent_candidates %}
+                <div class="candidates-list">
+                    {% for candidate in recent_candidates %}
+                        <div class="candidate-card">
+                            <img src="{{ candidate.get_profile_image_url }}" alt="{{ candidate.student_name }}" class="candidate-photo">
+                            <div class="candidate-info">
+                                <h4>{{ candidate.student_name|default:"Unnamed Candidate" }}</h4>
+                                <p><strong>Qualification:</strong> {{ candidate.primary_qualification|default:"Not specified" }}</p>
+                                <p><strong>University:</strong> {{ candidate.university|default:"Not specified" }}</p>
+                                <p><strong>Age:</strong> {{ candidate.age|default:"Not specified" }}</p>
+                            </div>
+                            <div class="candidate-actions">
+                                {% if can_evaluate %}
+                                    <a href="#" class="btn btn-sm btn-primary">View Details</a>
+                                    <a href="#" class="btn btn-sm btn-success">Evaluate</a>
+                                {% else %}
+                                    <a href="#" class="btn btn-sm btn-secondary disabled">View Only</a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p>No candidates available for review.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="committee-info">
+        <h3>Committee Member Permissions</h3>
+        <ul>
+            <li>✓ View candidate cards and personal data</li>
+            <li>{% if can_evaluate %}✓{% else %}✗{% endif %} Evaluate candidates</li>
+            <li>✓ Access random question system</li>
+            <li>✓ View evaluation criteria</li>
+            <li>✗ Manage candidate data (Admin only)</li>
+            <li>✗ Generate reports (Admin only)</li>
+        </ul>
+    </div>
+</div>
+
+<style>
+.dashboard-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.user-role {
+    color: #17a2b8;
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+.dashboard-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 8px;
+    text-align: center;
+    border-left: 4px solid #17a2b8;
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #17a2b8;
+    display: block;
+    margin: 0.5rem 0;
+}
+
+.stat-link {
+    color: #6c757d;
+    text-decoration: none;
+    font-size: 0.9rem;
+}
+
+.dashboard-content {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.action-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.inactive-message {
+    color: #dc3545;
+    font-style: italic;
+    padding: 1rem;
+    background: #f8d7da;
+    border-radius: 4px;
+}
+
+.candidates-list {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.candidate-card {
+    background: #f8f9fa;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 8px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 1rem;
+    align-items: center;
+}
+
+.candidate-photo {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.candidate-photo-placeholder {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: #dee2e6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+
+.candidate-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.committee-info {
+    background: #e8f4f8;
+    padding: 1.5rem;
+    border-radius: 8px;
+}
+
+.committee-info ul {
+    list-style: none;
+    padding: 0;
+}
+
+.committee-info li {
+    margin: 0.5rem 0;
+}
+
+.btn {
+    padding: 0.5rem 1rem;
+    text-decoration: none;
+    border-radius: 4px;
+    display: inline-block;
+    text-align: center;
+}
+
+.btn-primary {
+    background: #007bff;
+    color: white;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-success {
+    background: #28a745;
+    color: white;
+}
+
+.btn-info {
+    background: #17a2b8;
+    color: white;
+}
+
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+.disabled {
+    opacity: 0.6;
+    pointer-events: none;
+}
+</style>
+{% endblock %}
