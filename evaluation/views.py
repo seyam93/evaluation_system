@@ -268,8 +268,17 @@ def session_start(request, session_id):
     )
 
     if request.method == 'POST' and session.status == 'setup':
+        # Check if there are other active sessions before starting
+        other_active_sessions_exist = EvaluationSession.objects.filter(status='active').exclude(id=session_id).exists()
+
         session.start_session()
-        messages.success(request, 'تم بدء جلسة التقييم بنجاح.')
+
+        # Provide appropriate message based on whether other sessions were paused
+        if other_active_sessions_exist:
+            messages.success(request, 'تم بدء جلسة التقييم بنجاح. تم إيقاف الجلسات النشطة الأخرى مؤقتاً.')
+        else:
+            messages.success(request, 'تم بدء جلسة التقييم بنجاح.')
+
         return JsonResponse({'success': True, 'status': session.status})
 
     return JsonResponse({'success': False, 'error': 'Cannot start session'})
@@ -302,8 +311,17 @@ def session_resume(request, session_id):
     )
 
     if request.method == 'POST' and session.status == 'paused':
+        # Check if there are other active sessions before resuming
+        other_active_sessions_exist = EvaluationSession.objects.filter(status='active').exclude(id=session_id).exists()
+
         session.resume_session()
-        messages.success(request, 'تم استئناف جلسة التقييم.')
+
+        # Provide appropriate message based on whether other sessions were paused
+        if other_active_sessions_exist:
+            messages.success(request, 'تم استئناف جلسة التقييم. تم إيقاف الجلسات النشطة الأخرى مؤقتاً.')
+        else:
+            messages.success(request, 'تم استئناف جلسة التقييم.')
+
         return JsonResponse({'success': True, 'status': session.status})
 
     return JsonResponse({'success': False, 'error': 'Cannot resume session'})

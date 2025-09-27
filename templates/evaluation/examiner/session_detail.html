@@ -43,26 +43,25 @@
     <!-- Session Controls - Simple -->
     <div class="controls-section mb-4">
         {% if session.status == 'setup' %}
-            <a href="{% url 'evaluation:session_start' session.id %}" class="btn-primary">
+            <button onclick="startSession()" class="btn-primary">
                 <i class="fas fa-play"></i> بدء الجلسة
-            </a>
+            </button>
         {% elif session.status == 'active' %}
             {% if session.current_candidate %}
             <button class="btn-exam-end" onclick="endCurrentExam()" id="endExamBtn">
                 <i class="fas fa-flag-checkered"></i> إنهاء الاختبار الحالي
             </button>
             {% endif %}
-            <a href="{% url 'evaluation:session_pause' session.id %}" class="btn-warning">
+            <button onclick="pauseSession()" class="btn-warning">
                 <i class="fas fa-pause"></i> إيقاف مؤقت
-            </a>
-            <a href="{% url 'evaluation:session_complete' session.id %}" class="btn-danger"
-               onclick="return confirm('هل أنت متأكد من إنهاء الجلسة؟')">
+            </button>
+            <button onclick="completeSession()" class="btn-danger">
                 <i class="fas fa-stop"></i> إنهاء الجلسة
-            </a>
+            </button>
         {% elif session.status == 'paused' %}
-            <a href="{% url 'evaluation:session_resume' session.id %}" class="btn-success">
+            <button onclick="resumeSession()" class="btn-success">
                 <i class="fas fa-play"></i> استئناف
-            </a>
+            </button>
         {% endif %}
     </div>
 
@@ -239,7 +238,8 @@
     gap: 15px;
 }
 
-.controls-section a {
+.controls-section a,
+.controls-section button {
     display: inline-flex;
     align-items: center;
     gap: 8px;
@@ -248,6 +248,10 @@
     text-decoration: none;
     font-weight: 600;
     transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: inherit;
 }
 
 .btn-primary {
@@ -710,6 +714,59 @@ document.addEventListener('DOMContentLoaded', function() {
                 messageDiv.remove();
             }
         }, 3000);
+    }
+
+    // Session control functions
+    window.startSession = function() {
+        if (confirm('هل أنت متأكد من بدء الجلسة؟')) {
+            makeSessionRequest('start', 'بدء الجلسة');
+        }
+    };
+
+    window.pauseSession = function() {
+        if (confirm('هل أنت متأكد من إيقاف الجلسة مؤقتاً؟')) {
+            makeSessionRequest('pause', 'إيقاف الجلسة');
+        }
+    };
+
+    window.resumeSession = function() {
+        if (confirm('هل أنت متأكد من استئناف الجلسة؟')) {
+            makeSessionRequest('resume', 'استئناف الجلسة');
+        }
+    };
+
+    window.completeSession = function() {
+        if (confirm('هل أنت متأكد من إنهاء الجلسة نهائياً؟')) {
+            makeSessionRequest('complete', 'إنهاء الجلسة');
+        }
+    };
+
+    function makeSessionRequest(action, actionName) {
+        fetch(`/evaluation/examiner/session/${sessionId}/${action}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: JSON.stringify({})
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showMessage(`تم ${actionName} بنجاح`, 'success');
+                // Refresh the page to update the UI
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                showMessage(data.error || `حدث خطأ في ${actionName}`, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showMessage(`حدث خطأ في ${actionName}`, 'error');
+        });
     }
 
     // Add endCurrentExam function to global scope

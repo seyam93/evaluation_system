@@ -91,6 +91,20 @@ class EvaluationSession(models.Model):
     def __str__(self):
         return f'تقييم {self.plan.title} - {self.session_date}'
 
+    def clean(self):
+        """Validate that only one session can be active at a time"""
+        if self.status == 'active':
+            # Check if there are other active sessions
+            active_sessions = EvaluationSession.objects.filter(status='active')
+            if self.pk:
+                active_sessions = active_sessions.exclude(pk=self.pk)
+
+            if active_sessions.exists():
+                raise ValidationError(
+                    'يمكن أن يكون هناك جلسة تقييم نشطة واحدة فقط في نفس الوقت. '
+                    'يرجى إيقاف الجلسات النشطة الأخرى أولاً.'
+                )
+
     @property
     def total_candidates(self):
         """Total number of candidates in this plan"""
@@ -125,6 +139,12 @@ class EvaluationSession(models.Model):
 
     def start_session(self):
         """Start the evaluation session"""
+        # Check if there are any other active sessions and deactivate them
+        active_sessions = EvaluationSession.objects.filter(status='active').exclude(id=self.id)
+        if active_sessions.exists():
+            # Pause all other active sessions
+            active_sessions.update(status='paused')
+
         self.status = 'active'
         self.start_time = timezone.now()
         if not self.current_candidate:
@@ -145,6 +165,12 @@ class EvaluationSession(models.Model):
 
     def resume_session(self):
         """Resume the evaluation session"""
+        # Check if there are any other active sessions and deactivate them
+        active_sessions = EvaluationSession.objects.filter(status='active').exclude(id=self.id)
+        if active_sessions.exists():
+            # Pause all other active sessions
+            active_sessions.update(status='paused')
+
         self.status = 'active'
         self.save()
 
