@@ -4,14 +4,14 @@ from .models import TestCategory, CandidateTest, CandidateTestSummary, Previoust
 
 @admin.register(TestCategory)
 class TestCategoryAdmin(admin.ModelAdmin):
-    list_display = ['name', 'examination_type', 'max_score', 'is_active', 'created_at']
-    list_filter = ['examination_type', 'is_active', 'created_at']
+    list_display = ['name', 'examination_type', 'result_type', 'max_score', 'is_active', 'created_at']
+    list_filter = ['examination_type', 'result_type', 'is_active', 'created_at']
     search_fields = ['name', 'description']
-    list_editable = ['is_active', 'max_score']
+    list_editable = ['is_active', 'max_score', 'result_type']
 
     fieldsets = (
         ('Basic Information', {
-            'fields': ('name', 'examination_type', 'description')
+            'fields': ('name', 'examination_type', 'result_type', 'description')
         }),
         ('Settings', {
             'fields': ('max_score', 'is_active')
@@ -21,8 +21,8 @@ class TestCategoryAdmin(admin.ModelAdmin):
 
 @admin.register(CandidateTest)
 class CandidateTestAdmin(admin.ModelAdmin):
-    list_display = ['person', 'test_category', 'score', 'max_possible_score', 'get_percentage', 'get_grade', 'is_previous_test', 'test_date']
-    list_filter = ['test_category', 'is_previous_test', 'test_date', 'created_at']
+    list_display = ['person', 'test_category', 'get_result_display', 'get_grade', 'is_previous_test', 'test_date']
+    list_filter = ['test_category', 'test_category__result_type', 'pass_fail_result', 'is_previous_test', 'test_date', 'created_at']
     search_fields = ['person__student_name', 'test_category__name', 'notes']
     date_hierarchy = 'test_date'
 
@@ -30,14 +30,44 @@ class CandidateTestAdmin(admin.ModelAdmin):
         ('Test Information', {
             'fields': ('person', 'test_category', 'is_previous_test', 'test_date')
         }),
-        ('Scores', {
-            'fields': ('score', 'max_possible_score')
+        ('Numerical Score', {
+            'fields': ('score', 'max_possible_score'),
+            'description': 'Used for numerical tests only'
+        }),
+        ('Pass/Fail Result', {
+            'fields': ('pass_fail_result',),
+            'description': 'Used for pass/fail tests only'
         }),
         ('Additional Information', {
             'fields': ('notes',),
             'classes': ('collapse',)
         }),
     )
+
+    def get_result_display(self, obj):
+        return obj.result_display
+    get_result_display.short_description = 'Result'
+
+    def get_form(self, request, obj=None, **kwargs):
+        """Customize form based on test category result type"""
+        form = super().get_form(request, obj, **kwargs)
+
+        if obj and obj.test_category:
+            # Hide irrelevant fields based on test category type
+            if obj.test_category.result_type == 'pass_fail':
+                # For pass/fail tests, make score fields read-only
+                if 'score' in form.base_fields:
+                    form.base_fields['score'].widget.attrs['readonly'] = True
+                    form.base_fields['score'].help_text = 'Not used for pass/fail tests'
+                if 'max_possible_score' in form.base_fields:
+                    form.base_fields['max_possible_score'].widget.attrs['readonly'] = True
+            else:
+                # For numerical tests, hide pass/fail field
+                if 'pass_fail_result' in form.base_fields:
+                    form.base_fields['pass_fail_result'].widget.attrs['readonly'] = True
+                    form.base_fields['pass_fail_result'].help_text = 'Not used for numerical tests'
+
+        return form
 
     def get_percentage(self, obj):
         return f"{obj.percentage_score}%"
@@ -53,6 +83,7 @@ class CandidateTestAdmin(admin.ModelAdmin):
         # Update candidate test summary after saving a test
         summary, created = CandidateTestSummary.objects.get_or_create(person=obj.person)
         summary.update_summary()
+
 
 
 @admin.register(CandidateTestSummary)
@@ -96,26 +127,20 @@ class PrevioustestsAdmin(admin.ModelAdmin):
     search_fields = ['person__student_name']
 
     def get_queryset(self, request):
-        # Show a warning that this model is deprecated
         return super().get_queryset(request)
-
-    class Media:
-        css = {
-            'all': ('admin/css/deprecated.css',)
-        }
 
 
 @admin.register(PreviousTestTemplate)
 class PreviousTestTemplateAdmin(admin.ModelAdmin):
-    list_display = ['name', 'name_arabic', 'max_score', 'is_active', 'order']
-    list_filter = ['is_active', 'max_score']
+    list_display = ['name', 'name_arabic', 'result_type', 'max_score', 'is_active', 'order']
+    list_filter = ['result_type', 'is_active', 'max_score']
     search_fields = ['name', 'name_arabic']
-    list_editable = ['is_active', 'order', 'max_score']
+    list_editable = ['result_type', 'is_active', 'order', 'max_score']
     ordering = ['order', 'name']
 
     fieldsets = (
         ('Test Information', {
-            'fields': ('name', 'name_arabic', 'max_score')
+            'fields': ('name', 'name_arabic', 'result_type', 'max_score')
         }),
         ('Settings', {
             'fields': ('is_active', 'order')

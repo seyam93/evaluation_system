@@ -35,18 +35,19 @@ class Plan(models.Model):
 
 class Person(models.Model):
     GENDER_CHOICES = [
-        ('Male', 'Male'),
-        ('Female', 'Female'),
+        ('Male', 'ذكر'),
+        ('Female', 'أنثى'),
     ]
     MARITAL_STATUS = [
-        ('single', 'single'),
-        ('married', 'married'),
+        ('single', 'أعزب'),
+        ('married', 'متزوج'),
+        ('divorced', 'مطلق'),
     ]
     GENERAL_DEGREE = [
-        ('Excellent', 'Excellent'),
-        ('Very Good', 'Very Good'),
-        ('Good', 'Good'),
-        ('Sufficient', 'Sufficient'),
+        ('Excellent', 'ممتاز'),
+        ('Very Good', 'جيد جداً'),
+        ('Good', 'جيد'),
+        ('Sufficient', 'مقبول'),
     ]
 
     student_name = models.CharField(max_length=255, verbose_name="Student Name", blank=True, null=True)

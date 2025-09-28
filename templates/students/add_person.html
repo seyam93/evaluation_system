@@ -148,7 +148,7 @@ button:hover {
   <header class="top-bar">المنظومة الألية لإختبارات فرع المعلومات</header>
 
   <nav class="navbar">
-    <a href="{% url 'home' %}">الصفحة الرئيسية </a>
+    <a href="{% url 'core:home' %}">الصفحة الرئيسية </a>
     <a href="{% url 'add_person' %}">إضافة ممتحن</a>
 
   </nav>
@@ -210,6 +210,9 @@ button:hover {
 
         <label>محل الإقامة:</label>
         <input type="text" name="address" />
+
+        <label>ملاحظات:</label>
+        <textarea name="notes" rows="3" style="padding: 10px; margin-top: 5px; border-radius: 5px; border: 1px solid #ccc; width: 100%; font-size: 18px; font-family: Arial, sans-serif;"></textarea>
       </div>
       <button type="button" id="toggleTestsBtn">الاختبارات السابقة</button>
       <div id="testsContainer" style="display:none; margin-top:10px;">

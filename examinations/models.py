@@ -1,6 +1,9 @@
 from django.db import models
 from students.models import Person
 from django.core.validators import MinValueValidator, MaxValueValidator
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class TestCategory(models.Model):
@@ -10,12 +13,24 @@ class TestCategory(models.Model):
         ('interview_evaluation', 'Interview Evaluation'),
     ]
 
+    RESULT_TYPES = [
+        ('numerical', 'Numerical Score'),
+        ('pass_fail', 'Pass/Fail'),
+    ]
+
     name = models.CharField(max_length=100, verbose_name="Test Category")
     examination_type = models.CharField(
         max_length=20,
         choices=EXAMINATION_TYPES,
         default='previous_test',
         verbose_name="Examination Type"
+    )
+    result_type = models.CharField(
+        max_length=20,
+        choices=RESULT_TYPES,
+        default='numerical',
+        verbose_name="Result Type",
+        help_text="Choose whether this test uses numerical scores or pass/fail results"
     )
     description = models.TextField(blank=True, null=True, verbose_name="Description")
     max_score = models.IntegerField(default=100, verbose_name="Maximum Score")
@@ -34,13 +49,32 @@ class TestCategory(models.Model):
 
 class CandidateTest(models.Model):
     """Individual test results for candidates - supports both previous tests and interview evaluations"""
+    PASS_FAIL_CHOICES = [
+        ('pass', 'لائق'),
+        ('fail', 'غير لائق'),
+    ]
+
     person = models.ForeignKey(Person, on_delete=models.CASCADE, related_name='test_results')
     test_category = models.ForeignKey(TestCategory, on_delete=models.CASCADE, related_name='results')
+
+    # For numerical tests
     score = models.IntegerField(
         validators=[MinValueValidator(0)],
-        verbose_name="Score"
+        verbose_name="Score",
+        null=True, blank=True,
+        help_text="Used for numerical score tests"
     )
     max_possible_score = models.IntegerField(default=100, verbose_name="Max Possible Score")
+
+    # For pass/fail tests
+    pass_fail_result = models.CharField(
+        max_length=10,
+        choices=PASS_FAIL_CHOICES,
+        null=True, blank=True,
+        verbose_name="Pass/Fail Result",
+        help_text="Used for pass/fail tests"
+    )
+
     test_date = models.DateField(null=True, blank=True, verbose_name="Test Date")
     notes = models.TextField(blank=True, null=True, verbose_name="Additional Notes")
 
@@ -52,40 +86,90 @@ class CandidateTest(models.Model):
 
     def __str__(self):
         test_type = "Previous Test" if self.is_previous_test else "Interview Test"
-        return f"{self.person.student_name} - {self.test_category.name} ({test_type}): {self.score}/{self.max_possible_score}"
+        if self.test_category.result_type == 'pass_fail':
+            result = self.get_pass_fail_result_display() if self.pass_fail_result else "غير محدد"
+            return f"{self.person.student_name} - {self.test_category.name} ({test_type}): {result}"
+        else:
+            return f"{self.person.student_name} - {self.test_category.name} ({test_type}): {self.score}/{self.max_possible_score}"
 
     @property
     def percentage_score(self):
-        if self.max_possible_score > 0:
-            return round((self.score / self.max_possible_score) * 100, 2)
-        return 0
+        """Calculate percentage score - only applicable for numerical tests"""
+        if self.test_category.result_type == 'pass_fail':
+            # For pass/fail tests, return 100 for pass, 0 for fail
+            if self.pass_fail_result == 'pass':
+                return 100.0
+            elif self.pass_fail_result == 'fail':
+                return 0.0
+            else:
+                return None
+        else:
+            # For numerical tests
+            if self.score is not None and self.max_possible_score > 0:
+                return round((self.score / self.max_possible_score) * 100, 2)
+            return 0
 
     @property
     def grade(self):
-        percentage = self.percentage_score
-        if percentage >= 90:
-            return 'A'
-        elif percentage >= 80:
-            return 'B'
-        elif percentage >= 70:
-            return 'C'
-        elif percentage >= 60:
-            return 'D'
+        """Calculate grade based on test type"""
+        if self.test_category.result_type == 'pass_fail':
+            return 'A' if self.pass_fail_result == 'pass' else 'F'
         else:
-            return 'F'
+            percentage = self.percentage_score
+            if percentage is None:
+                return 'F'
+            if percentage >= 90:
+                return 'A'
+            elif percentage >= 80:
+                return 'B'
+            elif percentage >= 70:
+                return 'C'
+            elif percentage >= 60:
+                return 'D'
+            else:
+                return 'F'
 
     @property
     def grade_arabic(self):
         """Arabic grade representation"""
-        grade = self.grade
-        grade_map = {
-            'A': 'ممتاز',
-            'B': 'جيد جداً',
-            'C': 'جيد',
-            'D': 'مقبول',
-            'F': 'راسب'
-        }
-        return grade_map.get(grade, 'غير محدد')
+        if self.test_category.result_type == 'pass_fail':
+            return self.get_pass_fail_result_display() if self.pass_fail_result else 'غير محدد'
+        else:
+            grade = self.grade
+            grade_map = {
+                'A': 'ممتاز',
+                'B': 'جيد جداً',
+                'C': 'جيد',
+                'D': 'مقبول',
+                'F': 'راسب'
+            }
+            return grade_map.get(grade, 'غير محدد')
+
+    @property
+    def result_display(self):
+        """Display result based on test type"""
+        if self.test_category.result_type == 'pass_fail':
+            return self.get_pass_fail_result_display() if self.pass_fail_result else 'غير محدد'
+        else:
+            if self.score is not None:
+                return f"{self.score}/{self.max_possible_score} ({self.percentage_score}%)"
+            else:
+                return 'غير محدد'
+
+    def clean(self):
+        """Validate that the correct fields are filled based on test category type"""
+        from django.core.exceptions import ValidationError
+
+        if self.test_category.result_type == 'pass_fail':
+            if self.pass_fail_result is None:
+                raise ValidationError("Pass/Fail result is required for this test category.")
+            if self.score is not None:
+                raise ValidationError("Score should not be set for pass/fail tests.")
+        else:
+            if self.score is None:
+                raise ValidationError("Score is required for numerical tests.")
+            if self.pass_fail_result is not None:
+                raise ValidationError("Pass/Fail result should not be set for numerical tests.")
 
     class Meta:
         verbose_name = "Candidate Test Result"
@@ -147,8 +231,20 @@ class CandidateTestSummary(models.Model):
 
 class PreviousTestTemplate(models.Model):
     """Template for common previous tests that candidates typically take"""
+    RESULT_TYPES = [
+        ('numerical', 'Numerical Score'),
+        ('pass_fail', 'Pass/Fail'),
+    ]
+
     name = models.CharField(max_length=100, unique=True, verbose_name="Test Name")
     name_arabic = models.CharField(max_length=100, verbose_name="Test Name (Arabic)")
+    result_type = models.CharField(
+        max_length=20,
+        choices=RESULT_TYPES,
+        default='numerical',
+        verbose_name="Result Type",
+        help_text="Choose whether this test uses numerical scores or pass/fail results"
+    )
     max_score = models.IntegerField(default=100, verbose_name="Maximum Score")
     is_active = models.BooleanField(default=True, verbose_name="Active")
     order = models.IntegerField(default=0, verbose_name="Display Order")

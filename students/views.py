@@ -8,12 +8,15 @@ from django.views.decorators.http import require_http_methods
 from accounts.decorators import candidate_manager_required, committee_required
 import csv
 import openpyxl
+import logging
 from datetime import date
 from .models import Person, Qualification, Experience, Plan
 from .forms import PersonForm, QualificationForm, ExperienceForm, CandidateSearchForm, BulkActionForm, PlanForm, PlanSelectionForm, PreviousTestForm
 
+logger = logging.getLogger(__name__)
 
-# @committee_required  # Temporarily disabled for testing
+
+@committee_required
 def candidate_list(request):
     """List all candidates grouped by recruitment plans"""
     # Check if filtering by specific plan
@@ -60,7 +63,7 @@ def candidate_list(request):
     return render(request, 'students/candidate_list.html', context)
 
 
-# @committee_required  # Temporarily disabled for testing
+@committee_required
 def candidate_detail(request, pk):
     """Detailed view of a candidate"""
     candidate = get_object_or_404(Person, pk=pk)
@@ -77,7 +80,7 @@ def candidate_detail(request, pk):
     return render(request, 'students/candidate_detail.html', context)
 
 
-# @candidate_manager_required  # Temporarily disabled for testing
+@candidate_manager_required
 def candidate_create(request):
     """Create a new candidate"""
     if request.method == 'POST':
@@ -85,94 +88,116 @@ def candidate_create(request):
         previous_test_form = PreviousTestForm(request.POST)
 
         if form.is_valid() and previous_test_form.is_valid():
-            candidate = form.save()
+            try:
+                candidate = form.save()
+                logger.info(f"New candidate created: {candidate.student_name} (ID: {candidate.id})")
 
-            # Handle previous tests
-            from examinations.models import CandidateTest, TestCategory
-            test_data = previous_test_form.get_test_data()
+                # Handle previous tests
+                from examinations.models import CandidateTest, TestCategory
+                test_data = previous_test_form.get_test_data()
 
-            for test_info in test_data:
-                # Get or create test category
-                test_category, created = TestCategory.objects.get_or_create(
-                    name=test_info['name'],
-                    examination_type='previous_test',
-                    defaults={
-                        'max_score': test_info['max_score'],
-                        'description': f'Previous test for {test_info["name_arabic"]}'
+                for test_info in test_data:
+                    # Get or create test category
+                    test_category, created = TestCategory.objects.get_or_create(
+                        name=test_info['name'],
+                        examination_type='previous_test',
+                        defaults={
+                            'max_score': test_info['max_score'],
+                            'description': f'Previous test for {test_info["name_arabic"]}',
+                            'result_type': test_info['result_type']
+                        }
+                    )
+
+                    # Update the test category if it already exists but result_type differs
+                    if not created and test_category.result_type != test_info['result_type']:
+                        test_category.result_type = test_info['result_type']
+                        test_category.save()
+
+                    # Create the test result based on result type
+                    test_result_data = {
+                        'person': candidate,
+                        'test_category': test_category,
+                        'max_possible_score': test_info['max_score'],
+                        'is_previous_test': True,
+                        'notes': f'Previous test result entered during registration'
                     }
-                )
 
-                # Create the test result
-                CandidateTest.objects.create(
-                    person=candidate,
-                    test_category=test_category,
-                    score=test_info['score'],
-                    max_possible_score=test_info['max_score'],
-                    is_previous_test=True,
-                    notes=f'Previous test score entered during registration'
-                )
+                    if test_info['result_type'] == 'pass_fail':
+                        test_result_data['pass_fail_result'] = test_info['pass_fail_result']
+                        test_result_data['score'] = None
+                    else:
+                        test_result_data['score'] = test_info['score']
+                        test_result_data['pass_fail_result'] = None
 
-            # Handle qualifications
-            qualification_names = []
-            qualification_dates = []
-            for key, value in request.POST.items():
-                if key.startswith('qualification_name_') and value:
-                    qualification_names.append(value)
-                elif key.startswith('qualification_date_') and value:
-                    qualification_dates.append(value)
+                    CandidateTest.objects.create(**test_result_data)
+                    logger.info(f"Created test result for {candidate.student_name} - {test_category.name}: {test_info['score'] if test_info['result_type'] == 'numerical' else test_info['pass_fail_result']}")
 
-            # Create qualification objects
-            for i, name in enumerate(qualification_names):
-                if i < len(qualification_dates):
-                    Qualification.objects.create(
+                # Handle qualifications
+                qualification_names = []
+                qualification_dates = []
+                for key, value in request.POST.items():
+                    if key.startswith('qualification_name_') and value:
+                        qualification_names.append(value)
+                    elif key.startswith('qualification_date_') and value:
+                        qualification_dates.append(value)
+
+                # Create qualification objects
+                for i, name in enumerate(qualification_names):
+                    if i < len(qualification_dates):
+                        Qualification.objects.create(
+                            person=candidate,
+                            degree_name=name,
+                            degree_date=qualification_dates[i] if qualification_dates[i] else None
+                        )
+                    else:
+                        Qualification.objects.create(
+                            person=candidate,
+                            degree_name=name
+                        )
+
+                # Handle experiences
+                job_titles = []
+                company_names = []
+                start_dates = []
+                end_dates = []
+
+                for key, value in request.POST.items():
+                    if key.startswith('job_title_') and value:
+                        job_titles.append(value)
+                    elif key.startswith('company_name_') and value:
+                        company_names.append(value)
+                    elif key.startswith('start_date_') and value:
+                        start_dates.append(value)
+                    elif key.startswith('end_date_') and value:
+                        end_dates.append(value)
+
+                # Create experience objects
+                for i, title in enumerate(job_titles):
+                    company = company_names[i] if i < len(company_names) else None
+                    start_date = start_dates[i] if i < len(start_dates) else None
+                    end_date = end_dates[i] if i < len(end_dates) else None
+
+                    Experience.objects.create(
                         person=candidate,
-                        degree_name=name,
-                        degree_date=qualification_dates[i] if qualification_dates[i] else None
-                    )
-                else:
-                    Qualification.objects.create(
-                        person=candidate,
-                        degree_name=name
+                        job_title=title,
+                        company_name=company,
+                        start_date=start_date if start_date else None,
+                        end_date=end_date if end_date else None
                     )
 
-            # Handle experiences
-            job_titles = []
-            company_names = []
-            start_dates = []
-            end_dates = []
+                logger.info(f"Added {len(qualification_names)} qualifications and {len(job_titles)} experiences for {candidate.student_name}")
 
-            for key, value in request.POST.items():
-                if key.startswith('job_title_') and value:
-                    job_titles.append(value)
-                elif key.startswith('company_name_') and value:
-                    company_names.append(value)
-                elif key.startswith('start_date_') and value:
-                    start_dates.append(value)
-                elif key.startswith('end_date_') and value:
-                    end_dates.append(value)
+                # Update test summary if previous tests were added
+                if test_data:
+                    from examinations.models import CandidateTestSummary
+                    summary, created = CandidateTestSummary.objects.get_or_create(person=candidate)
+                    summary.update_summary()
 
-            # Create experience objects
-            for i, title in enumerate(job_titles):
-                company = company_names[i] if i < len(company_names) else None
-                start_date = start_dates[i] if i < len(start_dates) else None
-                end_date = end_dates[i] if i < len(end_dates) else None
-
-                Experience.objects.create(
-                    person=candidate,
-                    job_title=title,
-                    company_name=company,
-                    start_date=start_date if start_date else None,
-                    end_date=end_date if end_date else None
-                )
-
-            # Update test summary if previous tests were added
-            if test_data:
-                from examinations.models import CandidateTestSummary
-                summary, created = CandidateTestSummary.objects.get_or_create(person=candidate)
-                summary.update_summary()
-
-            messages.success(request, f'تم إنشاء ملف المرشح "{candidate.student_name}" بنجاح مع جميع المؤهلات والخبرات والاختبارات السابقة.')
-            return redirect('students:candidate_detail', pk=candidate.pk)
+                messages.success(request, f'تم إنشاء ملف المرشح "{candidate.student_name}" بنجاح مع جميع المؤهلات والخبرات والاختبارات السابقة.')
+                return redirect('students:candidate_detail', pk=candidate.pk)
+            except Exception as e:
+                logger.error(f"Error creating candidate: {str(e)}", exc_info=True)
+                messages.error(request, 'حدث خطأ أثناء إنشاء ملف المرشح. يرجى المحاولة مرة أخرى.')
     else:
         form = PersonForm()
         previous_test_form = PreviousTestForm()
@@ -187,7 +212,7 @@ def candidate_create(request):
     return render(request, 'students/candidate_form.html', context)
 
 
-# @candidate_manager_required  # Temporarily disabled for testing
+@candidate_manager_required
 def candidate_update(request, pk):
     """Update an existing candidate"""
     candidate = get_object_or_404(Person, pk=pk)
@@ -214,19 +239,33 @@ def candidate_update(request, pk):
                     examination_type='previous_test',
                     defaults={
                         'max_score': test_info['max_score'],
-                        'description': f'Previous test for {test_info["name_arabic"]}'
+                        'description': f'Previous test for {test_info["name_arabic"]}',
+                        'result_type': test_info['result_type']
                     }
                 )
 
-                # Create the test result
-                CandidateTest.objects.create(
-                    person=candidate,
-                    test_category=test_category,
-                    score=test_info['score'],
-                    max_possible_score=test_info['max_score'],
-                    is_previous_test=True,
-                    notes=f'Previous test score updated'
-                )
+                # Update the test category if it already exists but result_type differs
+                if not created and test_category.result_type != test_info['result_type']:
+                    test_category.result_type = test_info['result_type']
+                    test_category.save()
+
+                # Create the test result based on result type
+                test_result_data = {
+                    'person': candidate,
+                    'test_category': test_category,
+                    'max_possible_score': test_info['max_score'],
+                    'is_previous_test': True,
+                    'notes': f'Previous test result updated'
+                }
+
+                if test_info['result_type'] == 'pass_fail':
+                    test_result_data['pass_fail_result'] = test_info['pass_fail_result']
+                    test_result_data['score'] = None
+                else:
+                    test_result_data['score'] = test_info['score']
+                    test_result_data['pass_fail_result'] = None
+
+                CandidateTest.objects.create(**test_result_data)
 
             # Update test summary if previous tests were modified
             from examinations.models import CandidateTestSummary
@@ -252,7 +291,10 @@ def candidate_update(request, pk):
             template = name_to_template.get(test.test_category.name)
             if template:
                 field_name = f'test_{template.id}'
-                initial_data[field_name] = test.score
+                if template.result_type == 'pass_fail':
+                    initial_data[field_name] = test.pass_fail_result
+                else:
+                    initial_data[field_name] = test.score
 
         previous_test_form = PreviousTestForm(initial=initial_data)
 
@@ -268,7 +310,7 @@ def candidate_update(request, pk):
     return render(request, 'students/candidate_form.html', context)
 
 
-# @candidate_manager_required  # Temporarily disabled for testing
+@candidate_manager_required
 @require_http_methods(["POST"])
 def candidate_delete(request, pk):
     """Delete a candidate"""
@@ -279,7 +321,7 @@ def candidate_delete(request, pk):
     return redirect('students:candidate_list')
 
 
-# @candidate_manager_required  # Temporarily disabled for testing
+@candidate_manager_required
 def qualification_create(request, candidate_pk):
     """Add a qualification to a candidate"""
     candidate = get_object_or_404(Person, pk=candidate_pk)
@@ -305,7 +347,7 @@ def qualification_create(request, candidate_pk):
     return render(request, 'students/qualification_form.html', context)
 
 
-# @candidate_manager_required  # Temporarily disabled for testing
+@candidate_manager_required
 def experience_create(request, candidate_pk):
     """Add an experience to a candidate"""
     candidate = get_object_or_404(Person, pk=candidate_pk)
@@ -331,7 +373,7 @@ def experience_create(request, candidate_pk):
     return render(request, 'students/experience_form.html', context)
 
 
-# @candidate_manager_required  # Temporarily disabled for testing
+@candidate_manager_required
 def bulk_actions(request):
     """Handle bulk actions for candidates"""
     if request.method == 'POST':
@@ -430,7 +472,7 @@ def export_candidates_excel(candidates):
     return response
 
 
-# @committee_required  # Temporarily disabled for testing
+@committee_required
 def candidate_search_api(request):
     """API endpoint for candidate search autocomplete"""
     query = request.GET.get('q', '')
@@ -454,7 +496,7 @@ def candidate_search_api(request):
 
 # ==================== PLAN MANAGEMENT VIEWS ====================
 
-# @candidate_manager_required  # Temporarily disabled for testing
+@candidate_manager_required
 def plan_list(request):
     """List all recruitment plans"""
     plans = Plan.objects.all().order_by('-created_at')
@@ -475,7 +517,7 @@ def plan_list(request):
     return render(request, 'students/plan_list.html', context)
 
 
-# @candidate_manager_required  # Temporarily disabled for testing
+@candidate_manager_required
 def plan_detail(request, pk):
     """Detailed view of a recruitment plan with its candidates"""
     plan = get_object_or_404(Plan, pk=pk)
@@ -496,7 +538,7 @@ def plan_detail(request, pk):
     return render(request, 'students/plan_detail.html', context)
 
 
-# @candidate_manager_required  # Temporarily disabled for testing
+@candidate_manager_required
 def plan_create(request):
     """Create a new recruitment plan"""
     if request.method == 'POST':
@@ -517,7 +559,7 @@ def plan_create(request):
     return render(request, 'students/plan_form.html', context)
 
 
-# @candidate_manager_required  # Temporarily disabled for testing
+@candidate_manager_required
 def plan_update(request, pk):
     """Update an existing recruitment plan"""
     plan = get_object_or_404(Plan, pk=pk)
@@ -541,7 +583,7 @@ def plan_update(request, pk):
     return render(request, 'students/plan_form.html', context)
 
 
-# @candidate_manager_required  # Temporarily disabled for testing
+@candidate_manager_required
 @require_http_methods(["POST"])
 def plan_delete(request, pk):
     """Delete a recruitment plan"""
@@ -552,10 +594,10 @@ def plan_delete(request, pk):
     return redirect('students:plan_list')
 
 
-# @candidate_manager_required  # Temporarily disabled for testing
+@candidate_manager_required
 
 
-# @committee_required  # Temporarily disabled for testing
+@committee_required
 def plan_selection_for_evaluation(request):
     """Select a recruitment plan for evaluation"""
     if request.method == 'POST':
@@ -576,7 +618,7 @@ def plan_selection_for_evaluation(request):
     return render(request, 'students/plan_selection.html', context)
 
 
-# @committee_required  # Temporarily disabled for testing
+@committee_required
 def plan_evaluation(request, pk):
     """Evaluation interface for a specific recruitment plan"""
     plan = get_object_or_404(Plan, pk=pk)

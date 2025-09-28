@@ -5,6 +5,7 @@ from django.http import JsonResponse
 from django.utils import timezone
 from django.core.paginator import Paginator
 from django.db.models import Q
+import logging
 from accounts.decorators import examiner_required, evaluator_required, examinee_required
 from students.models import Plan
 from .models import (
@@ -12,6 +13,8 @@ from .models import (
     EvaluationAnswer, EvaluationTemplate
 )
 from .forms import EvaluationSessionForm, CandidateEvaluationForm, EvaluationQuestionForm
+
+logger = logging.getLogger(__name__)
 
 
 # Examiner Views
@@ -1484,9 +1487,9 @@ def save_complete_evaluation(request):
         })
 
     except Exception as e:
-        import traceback
-        print(f"Error in save_complete_evaluation: {e}")
-        print(traceback.format_exc())
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error in save_complete_evaluation: {e}", exc_info=True)
         return JsonResponse({
             'success': False,
             'error': f'حدث خطأ في حفظ التقييم: {str(e)}'
@@ -1538,9 +1541,9 @@ def get_candidate_details(request):
         })
 
     except Exception as e:
-        import traceback
-        print(f"Error in get_candidate_details: {e}")
-        print(traceback.format_exc())
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error in get_candidate_details: {e}", exc_info=True)
         return JsonResponse({
             'success': False,
             'error': f'حدث خطأ في تحميل بيانات المرشح: {str(e)}'

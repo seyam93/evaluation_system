@@ -164,6 +164,10 @@
                                         <td><strong>العنوان:</strong></td>
                                         <td>{{ candidate.address|linebreaks|default:"غير مقدم" }}</td>
                                     </tr>
+                                    <tr>
+                                        <td><strong>ملاحظات:</strong></td>
+                                        <td>{{ candidate.notes|linebreaks|default:"لا توجد ملاحظات" }}</td>
+                                    </tr>
                                 </table>
                             </div>
                         </div>

@@ -17,12 +17,12 @@ class PersonForm(forms.ModelForm):
         fields = [
             'student_name', 'personal_image', 'birth_date', 'gender',
             'primary_qualification', 'university', 'general_degree', 'graduation_year',
-            'marital_status', 'number_of_children', 'address', 'phone_number', 'email', 'plan'
+            'marital_status', 'number_of_children', 'address', 'phone_number', 'email', 'plan', 'notes'
         ]
         widgets = {
             'student_name': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Enter full name'
+                'placeholder': 'أدخل الاسم الكامل'
             }),
             'birth_date': forms.DateInput(attrs={
                 'class': 'form-control',
@@ -33,11 +33,11 @@ class PersonForm(forms.ModelForm):
             }),
             'primary_qualification': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'e.g., Bachelor of Engineering'
+                'placeholder': 'مثال: بكالوريوس هندسة'
             }),
             'university': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'University/Institution name'
+                'placeholder': 'اسم الجامعة أو المؤسسة التعليمية'
             }),
             'general_degree': forms.Select(attrs={
                 'class': 'form-control'
@@ -45,7 +45,8 @@ class PersonForm(forms.ModelForm):
             'graduation_year': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'min': '1950',
-                'max': str(timezone.now().year + 10)
+                'max': str(timezone.now().year + 10),
+                'placeholder': 'مثال: 2020'
             }),
             'marital_status': forms.Select(attrs={
                 'class': 'form-control'
@@ -53,16 +54,17 @@ class PersonForm(forms.ModelForm):
             'number_of_children': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'min': '0',
-                'max': '20'
+                'max': '20',
+                'placeholder': '0'
             }),
             'address': forms.Textarea(attrs={
                 'class': 'form-control',
                 'rows': 3,
-                'placeholder': 'Full address'
+                'placeholder': 'العنوان الكامل'
             }),
             'phone_number': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': '+1234567890'
+                'placeholder': '01012345678'
             }),
             'email': forms.EmailInput(attrs={
                 'class': 'form-control',
@@ -75,6 +77,11 @@ class PersonForm(forms.ModelForm):
             'plan': forms.Select(attrs={
                 'class': 'form-control',
                 'required': True
+            }),
+            'notes': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'أي ملاحظات إضافية حول المرشح...'
             })
         }
 
@@ -333,19 +340,33 @@ class PreviousTestForm(forms.Form):
 
         for template in templates:
             field_name = f'test_{template.id}'
-            self.fields[field_name] = forms.IntegerField(
-                required=False,
-                min_value=0,
-                max_value=template.max_score,
-                widget=forms.NumberInput(attrs={
-                    'class': 'form-control',
-                    'placeholder': f'درجة {template.name_arabic}',
-                    'min': '0',
-                    'max': str(template.max_score)
-                }),
-                label=f'درجة {template.name_arabic}',
-                help_text=f'الدرجة من {template.max_score}'
-            )
+
+            if template.result_type == 'pass_fail':
+                # Create a choice field for pass/fail tests
+                self.fields[field_name] = forms.ChoiceField(
+                    choices=[('', '-- اختر النتيجة --'), ('pass', 'لائق'), ('fail', 'غير لائق')],
+                    required=False,
+                    widget=forms.Select(attrs={
+                        'class': 'form-control'
+                    }),
+                    label=f'نتيجة {template.name_arabic}',
+                    help_text='اختر لائق أو غير لائق'
+                )
+            else:
+                # Create a number field for numerical tests
+                self.fields[field_name] = forms.IntegerField(
+                    required=False,
+                    min_value=0,
+                    max_value=template.max_score,
+                    widget=forms.NumberInput(attrs={
+                        'class': 'form-control',
+                        'placeholder': f'درجة {template.name_arabic}',
+                        'min': '0',
+                        'max': str(template.max_score)
+                    }),
+                    label=f'درجة {template.name_arabic}',
+                    help_text=f'الدرجة من {template.max_score}'
+                )
 
     def get_test_data(self):
         """Return test data in a format suitable for saving"""
@@ -356,15 +377,25 @@ class PreviousTestForm(forms.Form):
 
         for template in templates:
             field_name = f'test_{template.id}'
-            score = self.cleaned_data.get(field_name)
-            if score is not None:
-                tests.append({
+            result = self.cleaned_data.get(field_name)
+
+            if result is not None and result != '':
+                test_data = {
                     'template': template,
                     'name': template.name,
                     'name_arabic': template.name_arabic,
-                    'score': score,
+                    'result_type': template.result_type,
                     'max_score': template.max_score
-                })
+                }
+
+                if template.result_type == 'pass_fail':
+                    test_data['pass_fail_result'] = result
+                    test_data['score'] = None
+                else:
+                    test_data['score'] = result
+                    test_data['pass_fail_result'] = None
+
+                tests.append(test_data)
 
         return tests
 
@@ -380,7 +411,8 @@ class PreviousTestForm(forms.Form):
             template_fields.append({
                 'template': template,
                 'field': self[field_name],
-                'field_name': field_name
+                'field_name': field_name,
+                'result_type': template.result_type
             })
 
         return template_fields

@@ -64,7 +64,7 @@
                                 </div>
                                 <small class="text-muted">
                                     <i class="bi bi-info-circle me-1"></i>
-                                    اختر خطة التوظيف التي سيتقدم لها هذا المرشح
+                                    اختر خطة التوظيف المناسبة للمرشح. يجب أن تكون الخطة نشطة ومطابقة لمؤهلات المرشح
                                 </small>
                             </div>
 
@@ -88,6 +88,10 @@
                                                     <div class="invalid-feedback d-block">{{ error }}</div>
                                                 {% endfor %}
                                             {% endif %}
+                                            <div class="form-text">
+                                                <i class="bi bi-info-circle me-1"></i>
+                                                أدخل الاسم الكامل كما هو مدون في الهوية الشخصية
+                                            </div>
                                         </div>
                                         <div class="col-md-6">
                                             <label for="{{ form.email.id_for_label }}" class="form-label fw-semibold">
@@ -100,6 +104,10 @@
                                                     <div class="invalid-feedback d-block">{{ error }}</div>
                                                 {% endfor %}
                                             {% endif %}
+                                            <div class="form-text">
+                                                <i class="bi bi-info-circle me-1"></i>
+                                                البريد الإلكتروني يجب أن يكون صحيح وفعال للتواصل
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -125,6 +133,10 @@
                                                     <div class="invalid-feedback d-block">{{ error }}</div>
                                                 {% endfor %}
                                             {% endif %}
+                                            <div class="form-text">
+                                                <i class="bi bi-info-circle me-1"></i>
+                                                رقم الهاتف المصري يجب أن يبدأ بـ 010، 011، 012، أو 015
+                                            </div>
                                         </div>
                                         <div class="col-md-6">
                                             <label for="{{ form.birth_date.id_for_label }}" class="form-label fw-semibold">
@@ -137,6 +149,10 @@
                                                     <div class="invalid-feedback d-block">{{ error }}</div>
                                                 {% endfor %}
                                             {% endif %}
+                                            <div class="form-text">
+                                                <i class="bi bi-info-circle me-1"></i>
+                                                تاريخ الميلاد كما هو مدون في الهوية الشخصية (يجب أن يكون المرشح أكبر من 16 سنة)
+                                            </div>
                                         </div>
                                         <div class="col-md-4">
                                             <label for="{{ form.gender.id_for_label }}" class="form-label fw-semibold">
@@ -149,6 +165,10 @@
                                                     <div class="invalid-feedback d-block">{{ error }}</div>
                                                 {% endfor %}
                                             {% endif %}
+                                            <div class="form-text">
+                                                <i class="bi bi-info-circle me-1"></i>
+                                                اختر الجنس المطابق للهوية الشخصية
+                                            </div>
                                         </div>
                                         <div class="col-md-4">
                                             <label for="{{ form.marital_status.id_for_label }}" class="form-label fw-semibold">
@@ -208,6 +228,10 @@
                                                     <div class="invalid-feedback d-block">{{ error }}</div>
                                                 {% endfor %}
                                             {% endif %}
+                                            <div class="form-text">
+                                                <i class="bi bi-info-circle me-1"></i>
+                                                أدخل اسم الجامعة أو المؤسسة التعليمية التي تخرج منها المرشح
+                                            </div>
                                         </div>
                                         <div class="col-md-6">
                                             <label for="{{ form.general_degree.id_for_label }}" class="form-label fw-semibold">
@@ -230,6 +254,10 @@
                                                     <div class="invalid-feedback d-block">{{ error }}</div>
                                                 {% endfor %}
                                             {% endif %}
+                                            <div class="form-text">
+                                                <i class="bi bi-info-circle me-1"></i>
+                                                سنة التخرج من المؤهل الأساسي
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -256,6 +284,21 @@
                                             {% endif %}
                                         </div>
                                         <div class="col-md-12">
+                                            <label for="{{ form.notes.id_for_label }}" class="form-label fw-semibold">
+                                                <i class="bi bi-sticky me-1"></i>ملاحظات
+                                            </label>
+                                            {{ form.notes }}
+                                            {% if form.notes.errors %}
+                                                {% for error in form.notes.errors %}
+                                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                                {% endfor %}
+                                            {% endif %}
+                                            <div class="form-text">
+                                                <i class="bi bi-info-circle me-1"></i>
+                                                أي ملاحظات إضافية حول المرشح
+                                            </div>
+                                        </div>
+                                        <div class="col-md-12">
                                             <label for="{{ form.personal_image.id_for_label }}" class="form-label fw-semibold">
                                                 <i class="bi bi-image me-1"></i>الصورة الشخصية
                                             </label>
@@ -267,7 +310,7 @@
                                             {% endif %}
                                             <div class="form-text">
                                                 <i class="bi bi-info-circle me-1"></i>
-                                                ارفع صورة شخصية احترافية (JPG, PNG)
+                                                ارفع صورة شخصية حديثة وواضحة بصيغة JPG أو PNG (يفضل أن تكون رسمية)
                                             </div>
                                         </div>
                                     </div>
@@ -283,6 +326,10 @@
                                         </h5>
                                         <span class="badge bg-info">اختياري</span>
                                     </div>
+                                    <small class="text-muted d-block mt-2">
+                                        <i class="bi bi-info-circle me-1"></i>
+                                        أضف أي مؤهلات إضافية للمرشح غير المؤهل الأساسي المذكور أعلاه
+                                    </small>
                                 </div>
                                 <div class="card-body">
                                     <div id="qualifications-section">
@@ -292,13 +339,15 @@
                                                     <label class="form-label fw-semibold">
                                                         <i class="bi bi-award me-1"></i>اسم المؤهل
                                                     </label>
-                                                    <input type="text" name="qualification_name_1" class="form-control" placeholder="مثال: بكالوريوس علوم الحاسوب">
+                                                    <input type="text" name="qualification_name_1" class="form-control" placeholder="مثال: ماجستير إدارة أعمال، دبلوم الحاسوب">
+                                                    <div class="form-text">أدخل اسم المؤهل الإضافي بالتفصيل</div>
                                                 </div>
                                                 <div class="col-md-4">
                                                     <label class="form-label fw-semibold">
                                                         <i class="bi bi-calendar3 me-1"></i>تاريخ التخرج
                                                     </label>
                                                     <input type="date" name="qualification_date_1" class="form-control">
+                                                    <div class="form-text">تاريخ الحصول على المؤهل</div>
                                                 </div>
                                             </div>
                                         </div>
@@ -319,6 +368,10 @@
                                         </h5>
                                         <span class="badge bg-info">اختياري</span>
                                     </div>
+                                    <small class="text-muted d-block mt-2">
+                                        <i class="bi bi-info-circle me-1"></i>
+                                        أضف خبرات العمل السابقة للمرشح (ابدأ بالأحدث)
+                                    </small>
                                 </div>
                                 <div class="card-body">
                                     <div id="experience-section">
@@ -328,19 +381,22 @@
                                                     <label class="form-label fw-semibold">
                                                         <i class="bi bi-person-workspace me-1"></i>المسمى الوظيفي
                                                     </label>
-                                                    <input type="text" name="job_title_1" class="form-control" placeholder="مثال: مطور برمجيات">
+                                                    <input type="text" name="job_title_1" class="form-control" placeholder="مثال: مطور برمجيات، محاسب، مهندس">
+                                                    <div class="form-text">المنصب أو الوظيفة التي شغلها المرشح</div>
                                                 </div>
                                                 <div class="col-md-6">
                                                     <label class="form-label fw-semibold">
                                                         <i class="bi bi-building me-1"></i>اسم الشركة
                                                     </label>
-                                                    <input type="text" name="company_name_1" class="form-control" placeholder="مثال: شركة التقنية المتقدمة">
+                                                    <input type="text" name="company_name_1" class="form-control" placeholder="مثال: شركة المصرية للاتصالات">
+                                                    <div class="form-text">اسم الشركة أو المؤسسة</div>
                                                 </div>
                                                 <div class="col-md-6">
                                                     <label class="form-label fw-semibold">
                                                         <i class="bi bi-calendar-check me-1"></i>تاريخ البداية
                                                     </label>
                                                     <input type="date" name="start_date_1" class="form-control">
+                                                    <div class="form-text">تاريخ بداية العمل في هذا المنصب</div>
                                                 </div>
                                                 <div class="col-md-6">
                                                     <label class="form-label fw-semibold">
@@ -349,7 +405,7 @@
                                                     <input type="date" name="end_date_1" class="form-control">
                                                     <div class="form-text">
                                                         <i class="bi bi-info-circle me-1"></i>
-                                                        اتركه فارغاً إذا كان العمل مستمراً
+                                                        اتركه فارغاً إذا كان المرشح لا يزال يعمل في هذا المنصب
                                                     </div>
                                                 </div>
                                             </div>
