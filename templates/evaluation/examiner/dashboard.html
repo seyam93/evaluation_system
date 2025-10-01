@@ -75,17 +75,82 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <div>
-                            <h3 class="card-title">{{ recent_sessions.count }}</h3>
-                            <p class="card-text">الجلسات الأخيرة</p>
+                            {% if is_admin_view %}
+                                <h3 class="card-title">{{ paused_sessions }}</h3>
+                                <p class="card-text">الجلسات المتوقفة</p>
+                            {% else %}
+                                <h3 class="card-title">{{ recent_sessions.count }}</h3>
+                                <p class="card-text">الجلسات الأخيرة</p>
+                            {% endif %}
                         </div>
                         <div class="align-self-center">
-                            <i class="fas fa-clock fa-2x"></i>
+                            {% if is_admin_view %}
+                                <i class="fas fa-pause-circle fa-2x"></i>
+                            {% else %}
+                                <i class="fas fa-clock fa-2x"></i>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+
+    {% if is_admin_view %}
+    <!-- Admin Additional Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-4 mb-3">
+            <div class="card border-left-warning">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                إجمالي المشرفين</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_examiners }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-user-tie fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <div class="card border-left-success">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                أعضاء اللجنة</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_committee_members }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-users fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <div class="card border-left-secondary">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-secondary text-uppercase mb-1">
+                                جلسات في الإعداد</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ setup_sessions }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-cog fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
     <div class="row">
         <!-- Active Sessions -->
@@ -105,8 +170,11 @@
                                     <h6 class="mb-1">{{ session.plan.title }}</h6>
                                     <small class="text-muted">
                                         {{ session.session_date }}
+                                        {% if is_admin_view %}
+                                            - المشرف: {{ session.examiner.get_full_name|default:session.examiner.username }}
+                                        {% endif %}
                                         {% if session.current_candidate %}
-                                            - المرشح الحالي: {{ session.current_candidate.student_name }}
+                                            {% if is_admin_view %}<br>{% else %} - {% endif %}المرشح الحالي: {{ session.current_candidate.student_name }}
                                         {% endif %}
                                     </small>
                                     <div class="progress mt-1" style="height: 5px;">
@@ -148,7 +216,12 @@
                             <div class="d-flex justify-content-between align-items-center border-bottom py-2">
                                 <div>
                                     <h6 class="mb-1">{{ session.plan.title }}</h6>
-                                    <small class="text-muted">{{ session.session_date }}</small>
+                                    <small class="text-muted">
+                                        {{ session.session_date }}
+                                        {% if is_admin_view %}
+                                            - المشرف: {{ session.examiner.get_full_name|default:session.examiner.username }}
+                                        {% endif %}
+                                    </small>
                                     <br>
                                     <span class="badge
                                         {% if session.status == 'completed' %}badge-success
@@ -158,6 +231,11 @@
                                         {% else %}badge-danger{% endif %}">
                                         {{ session.get_status_display }}
                                     </span>
+                                    {% if is_admin_view %}
+                                        <small class="text-muted ml-2">
+                                            {{ session.evaluated_candidates_count }}/{{ session.total_candidates }} مقيم
+                                        </small>
+                                    {% endif %}
                                 </div>
                                 <div>
                                     <a href="{% url 'evaluation:session_detail' session.id %}"
@@ -238,6 +316,50 @@
 
 .border-bottom:last-child {
     border-bottom: none !important;
+}
+
+/* Admin card borders */
+.border-left-warning {
+    border-left: 0.25rem solid #f59e0b !important;
+}
+
+.border-left-secondary {
+    border-left: 0.25rem solid #6b7280 !important;
+}
+
+.text-xs {
+    font-size: 0.75rem;
+}
+
+.text-gray-300 {
+    color: #dddfeb !important;
+}
+
+.text-gray-800 {
+    color: #5a5c69 !important;
+}
+
+.no-gutters {
+    margin-right: 0;
+    margin-left: 0;
+}
+
+.no-gutters > .col,
+.no-gutters > [class*="col-"] {
+    padding-right: 0;
+    padding-left: 0;
+}
+
+.mr-2 {
+    margin-right: 0.5rem !important;
+}
+
+.ml-2 {
+    margin-left: 0.5rem !important;
+}
+
+.mb-1 {
+    margin-bottom: 0.25rem !important;
 }
 </style>
 {% endblock %}

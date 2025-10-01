@@ -21,23 +21,60 @@ logger = logging.getLogger(__name__)
 @examiner_required
 def examiner_dashboard(request):
     """Examiner dashboard showing session overview"""
-    user_sessions = EvaluationSession.objects.filter(
-        examiner=request.user
-    ).order_by('-session_date')[:5]
+    # Check if user is admin/superuser
+    is_admin = request.user.is_superuser or request.user.is_staff
+    
+    if is_admin:
+        # Admin sees all sessions from all examiners
+        user_sessions = EvaluationSession.objects.select_related(
+            'plan', 'current_candidate', 'examiner'
+        ).prefetch_related('candidate_evaluations').order_by('-session_date')[:10]
+        
+        active_sessions = EvaluationSession.objects.select_related(
+            'plan', 'current_candidate', 'examiner'
+        ).filter(status='active')
+        
+        # Admin statistics - all sessions across the system
+        total_sessions = EvaluationSession.objects.count()
+        completed_sessions = EvaluationSession.objects.filter(status='completed').count()
+        
+        # Additional admin statistics
+        from django.contrib.auth.models import User
+        total_examiners = User.objects.filter(groups__name='Examiner').count()
+        total_committee_members = User.objects.filter(groups__name='Committee').count()
+        
+        admin_context = {
+            'is_admin_view': True,
+            'total_examiners': total_examiners,
+            'total_committee_members': total_committee_members,
+            'paused_sessions': EvaluationSession.objects.filter(status='paused').count(),
+            'setup_sessions': EvaluationSession.objects.filter(status='setup').count(),
+        }
+    else:
+        # Regular examiner sees only their sessions
+        user_sessions = EvaluationSession.objects.filter(
+            examiner=request.user
+        ).order_by('-session_date')[:5]
 
-    active_sessions = EvaluationSession.objects.filter(
-        examiner=request.user,
-        status='active'
-    )
+        active_sessions = EvaluationSession.objects.filter(
+            examiner=request.user,
+            status='active'
+        )
+        
+        total_sessions = EvaluationSession.objects.filter(examiner=request.user).count()
+        completed_sessions = EvaluationSession.objects.filter(
+            examiner=request.user, status='completed'
+        ).count()
+        
+        admin_context = {'is_admin_view': False}
 
     context = {
-        'title': 'لوحة تحكم المشرف',
+        'title': 'لوحة تحكم المشرف' if not is_admin else 'لوحة تحكم الإدارة',
         'recent_sessions': user_sessions,
         'active_sessions': active_sessions,
-        'total_sessions': EvaluationSession.objects.filter(examiner=request.user).count(),
-        'completed_sessions': EvaluationSession.objects.filter(
-            examiner=request.user, status='completed'
-        ).count(),
+        'total_sessions': total_sessions,
+        'completed_sessions': completed_sessions,
+        **admin_context
     }
 
     return render(request, 'evaluation/examiner/dashboard.html', context)
@@ -45,34 +82,72 @@ def examiner_dashboard(request):
 
 @examiner_required
 def session_list(request):
-    """List all evaluation sessions for the examiner"""
-    sessions = EvaluationSession.objects.filter(
-        examiner=request.user
-    ).select_related('plan', 'current_candidate').order_by('-session_date')
+    """List all evaluation sessions for the examiner or all sessions for admin"""
+    # Check if user is admin/superuser
+    is_admin = request.user.is_superuser or request.user.is_staff
+    
+    if is_admin:
+        # Admin sees all sessions from all examiners
+        sessions = EvaluationSession.objects.select_related(
+            'plan', 'current_candidate', 'examiner'
+        ).prefetch_related('candidate_evaluations').order_by('-session_date')
+        title = 'جميع جلسات التقييم - عرض الإدارة'
+    else:
+        # Regular examiner sees only their sessions
+        sessions = EvaluationSession.objects.filter(
+            examiner=request.user
+        ).select_related('plan', 'current_candidate').order_by('-session_date')
+        title = 'جلسات التقييم'
 
     # Search functionality
     search_query = request.GET.get('search')
     if search_query:
-        sessions = sessions.filter(
-            Q(plan__title__icontains=search_query) |
-            Q(notes__icontains=search_query)
-        )
+        if is_admin:
+            # Admin can search by examiner name as well
+            sessions = sessions.filter(
+                Q(plan__title__icontains=search_query) |
+                Q(notes__icontains=search_query) |
+                Q(examiner__first_name__icontains=search_query) |
+                Q(examiner__last_name__icontains=search_query) |
+                Q(examiner__username__icontains=search_query)
+            )
+        else:
+            sessions = sessions.filter(
+                Q(plan__title__icontains=search_query) |
+                Q(notes__icontains=search_query)
+            )
 
     # Filter by status
     status_filter = request.GET.get('status')
     if status_filter:
         sessions = sessions.filter(status=status_filter)
 
-    paginator = Paginator(sessions, 10)
+    # Filter by examiner (admin only)
+    examiner_filter = request.GET.get('examiner')
+    if examiner_filter and is_admin:
+        sessions = sessions.filter(examiner_id=examiner_filter)
+
+    paginator = Paginator(sessions, 15 if is_admin else 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
+    # Get list of examiners for admin filter
+    examiners_list = None
+    if is_admin:
+        from django.contrib.auth.models import User
+        examiners_list = User.objects.filter(
+            examination_sessions__isnull=False
+        ).distinct().order_by('first_name', 'last_name')
+
     context = {
-        'title': 'جلسات التقييم',
+        'title': title,
         'page_obj': page_obj,
         'search_query': search_query,
         'status_filter': status_filter,
+        'examiner_filter': examiner_filter,
         'status_choices': EvaluationSession.SESSION_STATUS,
+        'is_admin_view': is_admin,
+        'examiners_list': examiners_list,
     }
 
     return render(request, 'evaluation/examiner/session_list.html', context)
@@ -188,11 +263,25 @@ def session_create_for_plan(request, plan_id):
 @examiner_required
 def session_detail(request, session_id):
     """Detailed view of an evaluation session"""
-    session = get_object_or_404(
-        EvaluationSession,
-        id=session_id,
-        examiner=request.user
-    )
+    # Check if user is admin/superuser
+    is_admin = request.user.is_superuser or request.user.is_staff
+    
+    if is_admin:
+        # Admin can view any session
+        session = get_object_or_404(
+            EvaluationSession.objects.select_related('examiner', 'plan', 'current_candidate'),
+            id=session_id
+        )
+        # Admin cannot control sessions they don't own
+        can_control = session.examiner == request.user
+    else:
+        # Regular examiner can only view their own sessions
+        session = get_object_or_404(
+            EvaluationSession,
+            id=session_id,
+            examiner=request.user
+        )
+        can_control = True
 
     evaluations = session.candidate_evaluations.select_related(
         'candidate', 'evaluator'
@@ -201,15 +290,40 @@ def session_detail(request, session_id):
     # Get all candidates from this session's plan
     all_candidates = session.plan.candidates.all().order_by('student_name')
 
+    # Admin-specific statistics
+    admin_stats = {}
+    if is_admin:
+        from django.db.models import Count, Avg
+        admin_stats = {
+            'total_evaluations': evaluations.count(),
+            'completed_evaluations': evaluations.filter(is_completed=True).count(),
+            'average_score': evaluations.filter(is_completed=True).aggregate(
+                avg_score=Avg('total_score')
+            )['avg_score'] or 0,
+            'evaluation_duration': None,
+        }
+        
+        # Calculate average evaluation duration
+        completed_evals = evaluations.filter(is_completed=True, end_time__isnull=False)
+        if completed_evals.exists():
+            total_duration = sum([
+                (eval.end_time - eval.start_time).total_seconds() / 60
+                for eval in completed_evals if eval.end_time and eval.start_time
+            ])
+            admin_stats['evaluation_duration'] = total_duration / completed_evals.count() if completed_evals.count() > 0 else 0
+
     context = {
         'title': f'جلسة تقييم - {session.plan.title}',
         'session': session,
         'evaluations': evaluations,
         'all_candidates': all_candidates,
-        'can_start': session.status == 'setup',
-        'can_pause': session.status == 'active',
-        'can_resume': session.status == 'paused',
-        'can_complete': session.status in ['active', 'paused'],
+        'can_start': can_control and session.status == 'setup',
+        'can_pause': can_control and session.status == 'active',
+        'can_resume': can_control and session.status == 'paused',
+        'can_complete': can_control and session.status in ['active', 'paused'],
+        'is_admin_view': is_admin,
+        'can_control': can_control,
+        'admin_stats': admin_stats,
     }
 
     return render(request, 'evaluation/examiner/session_detail.html', context)

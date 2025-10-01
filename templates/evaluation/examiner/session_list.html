@@ -23,10 +23,10 @@
             <div class="card">
                 <div class="card-body">
                     <form method="GET" class="row g-3">
-                        <div class="col-md-4">
+                        <div class="col-md-{% if is_admin_view %}3{% else %}4{% endif %}">
                             <label class="form-label">البحث</label>
                             <input type="text" name="search" class="form-control"
-                                   placeholder="البحث في اسم الخطة أو الملاحظات..."
+                                   placeholder="{% if is_admin_view %}البحث في الخطة، الملاحظات، أو اسم المشرف...{% else %}البحث في اسم الخطة أو الملاحظات...{% endif %}"
                                    value="{{ search_query }}">
                         </div>
                         <div class="col-md-3">
@@ -41,7 +41,21 @@
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="col-md-5 d-flex align-items-end">
+                        {% if is_admin_view %}
+                        <div class="col-md-3">
+                            <label class="form-label">المشرف</label>
+                            <select name="examiner" class="form-select">
+                                <option value="">جميع المشرفين</option>
+                                {% for examiner in examiners_list %}
+                                    <option value="{{ examiner.id }}"
+                                            {% if examiner_filter == examiner.id|stringformat:"s" %}selected{% endif %}>
+                                        {{ examiner.get_full_name|default:examiner.username }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        {% endif %}
+                        <div class="col-md-3 d-flex align-items-end">
                             <button type="submit" class="btn btn-primary me-2">
                                 <i class="fas fa-search"></i> بحث
                             </button>
@@ -72,6 +86,7 @@
                                 <thead class="table-light">
                                     <tr>
                                         <th>خطة التوظيف</th>
+                                        {% if is_admin_view %}<th>المشرف</th>{% endif %}
                                         <th>تاريخ الجلسة</th>
                                         <th>المرشح الحالي</th>
                                         <th>الحالة</th>
@@ -88,6 +103,18 @@
                                                     <br><small class="text-muted">{{ session.notes|truncatechars:50 }}</small>
                                                 {% endif %}
                                             </td>
+                                            {% if is_admin_view %}
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div>
+                                                        <strong>{{ session.examiner.get_full_name|default:session.examiner.username }}</strong>
+                                                        {% if session.examiner.email %}
+                                                            <br><small class="text-muted">{{ session.examiner.email }}</small>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            {% endif %}
                                             <td>{{ session.session_date }}</td>
                                             <td>
                                                 {% if session.current_candidate %}
@@ -115,6 +142,9 @@
                                                         {{ session.progress_percentage }}%
                                                     </div>
                                                 </div>
+                                                {% if is_admin_view %}
+                                                    <small class="text-muted">{{ session.evaluated_candidates_count }}/{{ session.total_candidates }} مقيم</small>
+                                                {% endif %}
                                             </td>
                                             <td>
                                                 <div class="btn-group" role="group">
@@ -142,10 +172,10 @@
                                 <ul class="pagination justify-content-center">
                                     {% if page_obj.has_previous %}
                                         <li class="page-item">
-                                            <a class="page-link" href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">الأولى</a>
+                                            <a class="page-link" href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if examiner_filter %}&examiner={{ examiner_filter }}{% endif %}">الأولى</a>
                                         </li>
                                         <li class="page-item">
-                                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">السابقة</a>
+                                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if examiner_filter %}&examiner={{ examiner_filter }}{% endif %}">السابقة</a>
                                         </li>
                                     {% endif %}
 
@@ -157,10 +187,10 @@
 
                                     {% if page_obj.has_next %}
                                         <li class="page-item">
-                                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">التالية</a>
+                                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if examiner_filter %}&examiner={{ examiner_filter }}{% endif %}">التالية</a>
                                         </li>
                                         <li class="page-item">
-                                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">الأخيرة</a>
+                                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if examiner_filter %}&examiner={{ examiner_filter }}{% endif %}">الأخيرة</a>
                                         </li>
                                     {% endif %}
                                 </ul>
